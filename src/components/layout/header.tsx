@@ -22,7 +22,6 @@ export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
-  // Close mobile menu on navigation
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
@@ -32,7 +31,7 @@ export function Header() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           <Link href="/" className="text-3xl font-bold text-brand-primary font-inter">
-            MangaFluent
+            BEYOND SCANS
           </Link>
 
           <nav className="hidden md:flex space-x-6 items-center">
@@ -69,7 +68,7 @@ export function Header() {
               <SheetContent side="top" className="bg-neutral-medium text-neutral-extralight p-0 h-auto border-b-neutral-light">
                 <div className="p-4">
                    <Link href="/" className="text-2xl font-bold text-brand-primary font-inter mb-6 block text-center" onClick={() => setIsMobileMenuOpen(false)}>
-                      MangaFluent
+                      BEYOND SCANS
                     </Link>
                 <nav className="flex flex-col space-y-2 items-center">
                   {navItems.map((item) => (

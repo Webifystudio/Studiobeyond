@@ -4,11 +4,37 @@ import { Footer } from '@/components/layout/footer';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { GenreGrid } from '@/components/manga/genre-grid';
+import { GenreGrid, type GenreItem } from '@/components/manga/genre-grid';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, query, orderBy, Timestamp } from 'firebase/firestore';
 
-const genres: any[] = []; // Data to be fetched from Firestore
+interface GenreDoc {
+  id: string;
+  name: string;
+  createdAt: Timestamp;
+}
 
-export default function GenresPage() {
+async function getAllGenres(): Promise<GenreItem[]> {
+  try {
+    const genresQuery = query(collection(db, 'genres'), orderBy('name', 'asc'));
+    const genresSnapshot = await getDocs(genresQuery);
+    return genresSnapshot.docs.map(doc => {
+      const data = doc.data() as Omit<GenreDoc, 'id'>;
+      return {
+        id: doc.id,
+        name: data.name,
+        href: `/genre/${encodeURIComponent(data.name.toLowerCase())}`,
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching all genres: ", error);
+    return [];
+  }
+}
+
+export default async function GenresPage() {
+  const genres = await getAllGenres();
+
   return (
     <div className="flex flex-col min-h-screen bg-neutral-dark">
       <Header />
@@ -23,7 +49,7 @@ export default function GenresPage() {
         ) : (
             <div className="text-center">
                 <h1 className="text-3xl font-bold text-white mb-4 font-headline">All Genres</h1>
-                <p className="text-neutral-extralight">Genres will be listed here once added through the admin panel.</p>
+                <p className="text-neutral-extralight">No genres found. Add genres through the admin panel.</p>
             </div>
         )}
       </main>

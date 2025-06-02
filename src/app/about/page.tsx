@@ -1,3 +1,4 @@
+
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { Button } from '@/components/ui/button';
@@ -15,15 +16,15 @@ export default function AboutPage() {
           </Link>
         </Button>
         <div className="bg-neutral-medium p-8 rounded-xl shadow-lg">
-          <h1 className="text-3xl font-bold text-brand-primary mb-6 font-headline">About MangaFluent</h1>
+          <h1 className="text-3xl font-bold text-brand-primary mb-6 font-headline">About BEYOND SCANS</h1>
           <p className="text-neutral-extralight/90 mb-4 font-body">
-            MangaFluent is your ultimate destination for discovering and tracking your favorite manga series. Our mission is to provide a seamless and enjoyable experience for manga enthusiasts worldwide.
+            BEYOND SCANS is your ultimate destination for discovering and tracking your favorite manga series. Our mission is to provide a seamless and enjoyable experience for manga enthusiasts worldwide.
           </p>
           <p className="text-neutral-extralight/90 mb-4 font-body">
             We offer a vast collection of titles across various genres, from action-packed adventures to heartwarming slice-of-life stories. Our platform features AI-powered review summaries to help you quickly gauge community sentiment and decide what to read next.
           </p>
           <p className="text-neutral-extralight/90 font-body">
-            Thank you for choosing MangaFluent. We are constantly working to improve our service and bring you the best manga reading experience.
+            Thank you for choosing BEYOND SCANS. We are constantly working to improve our service and bring you the best manga reading experience.
           </p>
         </div>
       </main>

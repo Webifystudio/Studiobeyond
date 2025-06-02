@@ -18,8 +18,7 @@ export default function AdminLoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if already logged in
-    if (localStorage.getItem('isAdminAuthenticated') === 'true') {
+    if (typeof window !== 'undefined' && localStorage.getItem('isAdminAuthenticated') === 'true') {
       router.push('/admin/dashboard');
     }
   }, [router]);
@@ -27,7 +26,9 @@ export default function AdminLoginPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (password === ADMIN_PASSWORD) {
-      localStorage.setItem('isAdminAuthenticated', 'true');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('isAdminAuthenticated', 'true');
+      }
       router.push('/admin/dashboard');
     } else {
       setError('Invalid password. Please try again.');
@@ -38,9 +39,9 @@ export default function AdminLoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-neutral-dark p-4">
       <Card className="w-full max-w-md bg-neutral-medium border-neutral-light shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold text-brand-primary font-headline">Admin Panel</CardTitle>
+          <CardTitle className="text-3xl font-bold text-brand-primary font-headline">BEYOND SCANS Admin</CardTitle>
           <CardDescription className="text-neutral-extralight/80">
-            Please enter the password to access the MangaFluent admin area.
+            Please enter the password to access the admin area.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>

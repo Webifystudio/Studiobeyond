@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import { FacebookIcon, TwitterIcon, InstagramIcon } from '@/components/icons';
 
@@ -7,9 +8,9 @@ export function Footer() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
-            <h3 className="text-xl font-bold text-brand-primary mb-4 font-inter">MangaFluent</h3>
+            <h3 className="text-xl font-bold text-brand-primary mb-4 font-inter">BEYOND SCANS</h3>
             <p className="text-neutral-extralight/80 text-sm max-w-xs font-inter">
-              Your ultimate destination for reading the latest and greatest manga series online.
+              Your ultimate destination for discovering and tracking the latest and greatest manga series.
             </p>
           </div>
           <div>
@@ -37,7 +38,7 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-8 border-t border-neutral-light pt-8 text-center">
-          <p className="text-neutral-extralight/70 text-sm font-inter">&copy; {new Date().getFullYear()} MangaFluent. All Rights Reserved. Designed with ❤️.</p>
+          <p className="text-neutral-extralight/70 text-sm font-inter">&copy; {new Date().getFullYear()} BEYOND SCANS. All Rights Reserved. Designed with ❤️.</p>
         </div>
       </div>
     </footer>

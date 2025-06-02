@@ -1,20 +1,34 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Tag, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-export default function AdminDashboardPage() {
+// This page will eventually fetch actual counts from Firestore
+async function getStats() {
+  // Placeholder: in a real app, fetch counts from Firestore
+  // e.g., const genresCount = (await getDocs(collection(db, "genres"))).size;
+  return {
+    genres: 0,
+    mangas: 0,
+    sliderItems: 0,
+  };
+}
+
+
+export default async function AdminDashboardPage() {
+  const counts = await getStats(); // This will be placeholder values for now
+
   const stats = [
-    { title: "Total Genres", value: "0", icon: Tag, href: "/admin/dashboard/genres", description: "Manage all manga genres.", color: "text-blue-400" },
-    { title: "Total Mangas", value: "0", icon: BookOpen, href: "/admin/dashboard/mangas", description: "Manage all manga entries.", color: "text-green-400" },
-    { title: "Slider Items", value: "0", icon: ImageIcon, href: "/admin/dashboard/slider", description: "Manage hero slider content.", color: "text-purple-400" },
+    { title: "Total Genres", value: counts.genres.toString(), icon: Tag, href: "/admin/dashboard/genres", description: "Manage all manga genres.", color: "text-blue-400" },
+    { title: "Total Mangas", value: counts.mangas.toString(), icon: BookOpen, href: "/admin/dashboard/mangas", description: "Manage all manga entries.", color: "text-green-400" },
+    { title: "Slider Items", value: counts.sliderItems.toString(), icon: ImageIcon, href: "/admin/dashboard/slider", description: "Manage hero slider content.", color: "text-purple-400" },
   ];
 
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold text-white font-headline">Admin Dashboard</h1>
-      <p className="text-neutral-extralight/80">Welcome to the MangaFluent Admin Panel. Manage your site's content from here.</p>
+      <p className="text-neutral-extralight/80">Welcome to the BEYOND SCANS Admin Panel. Manage your site's content from here.</p>
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {stats.map((stat) => (
@@ -42,8 +56,7 @@ export default function AdminDashboardPage() {
           <p>1. <Link href="/admin/dashboard/genres" className="text-brand-primary hover:underline">Manage Genres</Link>: Add or edit manga genres.</p>
           <p>2. <Link href="/admin/dashboard/mangas" className="text-brand-primary hover:underline">Manage Mangas</Link>: Add new manga series, chapters, and details.</p>
           <p>3. <Link href="/admin/dashboard/slider" className="text-brand-primary hover:underline">Manage Slider</Link>: Update the hero section/image slider on the homepage.</p>
-          <p className="pt-2">Data entered here will be (eventually) stored in Firebase Firestore and displayed on the public website.</p>
-          <p className="text-yellow-400/80 text-sm">Note: Currently, forms are for UI demonstration. Data saving to database is not yet implemented.</p>
+          <p className="pt-2">Data entered here will be stored in Firebase Firestore and displayed on the public website.</p>
         </CardContent>
       </Card>
     </div>

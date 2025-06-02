@@ -1,10 +1,11 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'MangaFluent - Read Your Favorite Manga',
-  description: 'Your ultimate destination for reading the latest and greatest manga series online.',
+  title: 'BEYOND SCANS - Read Your Favorite Manga',
+  description: 'Your ultimate destination for discovering and tracking the latest and greatest manga series.',
 };
 
 export default function RootLayout({

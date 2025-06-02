@@ -1,35 +1,82 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, List } from 'lucide-react';
+import { PlusCircle, List, Trash2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { db, serverTimestamp } from '@/lib/firebase';
+import { collection, addDoc, getDocs, deleteDoc, doc, orderBy, query, Timestamp } from 'firebase/firestore';
 
 interface Genre {
   id: string;
   name: string;
+  createdAt: Timestamp;
 }
 
 export default function ManageGenresPage() {
   const [genreName, setGenreName] = useState('');
-  const [genres, setGenres] = useState<Genre[]>([]); // This will come from Firestore
+  const [genres, setGenres] = useState<Genre[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const handleAddGenre = (e: React.FormEvent) => {
+  const fetchGenres = async () => {
+    setIsLoading(true);
+    try {
+      const genresCollection = collection(db, 'genres');
+      const q = query(genresCollection, orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const genresList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Genre));
+      setGenres(genresList);
+    } catch (error) {
+      console.error("Error fetching genres: ", error);
+      toast({ title: "Error", description: "Could not fetch genres.", variant: "destructive" });
+    }
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchGenres();
+  }, []);
+
+  const handleAddGenre = async (e: FormEvent) => {
     e.preventDefault();
     if (!genreName.trim()) {
       toast({ title: "Error", description: "Genre name cannot be empty.", variant: "destructive" });
       return;
     }
-    // In a real app, this would save to Firestore
-    const newGenre = { id: Date.now().toString(), name: genreName };
-    setGenres([...genres, newGenre]);
-    toast({ title: "Genre Added (UI Only)", description: `Genre "${genreName}" added to the list. Data not saved.` });
-    setGenreName('');
+    try {
+      await addDoc(collection(db, 'genres'), {
+        name: genreName.trim(),
+        createdAt: serverTimestamp()
+      });
+      toast({ title: "Genre Added", description: `Genre "${genreName}" added successfully.` });
+      setGenreName('');
+      fetchGenres(); // Refresh list
+    } catch (error) {
+      console.error("Error adding genre: ", error);
+      toast({ title: "Error", description: "Could not add genre.", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteGenre = async (genreId: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete genre "${name}"? This action cannot be undone.`)) {
+        return;
+    }
+    try {
+        await deleteDoc(doc(db, "genres", genreId));
+        toast({ title: "Genre Deleted", description: `Genre "${name}" deleted successfully.` });
+        fetchGenres(); // Refresh list
+    } catch (error) {
+        console.error("Error deleting genre: ", error);
+        toast({ title: "Error", description: "Could not delete genre.", variant: "destructive" });
+    }
   };
 
   return (
@@ -71,19 +118,28 @@ export default function ManageGenresPage() {
             <List className="mr-2 h-5 w-5 text-brand-primary" /> Existing Genres
           </CardTitle>
           <CardDescription className="text-neutral-extralight/80">
-            List of currently available genres. (Data persistence not yet implemented)
+            List of currently available genres.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {genres.length === 0 ? (
+          {isLoading ? (
+            <p className="text-neutral-extralight/70">Loading genres...</p>
+          ) : genres.length === 0 ? (
             <p className="text-neutral-extralight/70">No genres added yet.</p>
           ) : (
             <ul className="space-y-2">
               {genres.map((genre) => (
-                <li key={genre.id} className="flex justify-between items-center p-2 bg-neutral-light rounded-md">
+                <li key={genre.id} className="flex justify-between items-center p-3 bg-neutral-light rounded-md shadow">
                   <span className="text-neutral-extralight">{genre.name}</span>
-                  {/* Add Edit/Delete buttons here later */}
-                  <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-300">Delete (UI Only)</Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-red-400 hover:text-red-300 hover:bg-neutral-medium/50"
+                    onClick={() => handleDeleteGenre(genre.id, genre.name)}
+                    aria-label={`Delete ${genre.name}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </li>
               ))}
             </ul>

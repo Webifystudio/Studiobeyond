@@ -1,61 +1,117 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, List } from 'lucide-react';
+import { PlusCircle, List, Trash2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // For genre selection
+import { db, serverTimestamp } from '@/lib/firebase';
+import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, Timestamp } from 'firebase/firestore';
+import Image from 'next/image';
 
 interface Manga {
   id: string;
   title: string;
   description: string;
   chapters: number;
-  status: string; // e.g., Ongoing, Completed
+  status: string;
   imageUrl: string;
-  // genreIds: string[]; // To link to genre collection
+  genres: string[]; // Storing genre names as an array of strings for simplicity
+  dataAiHint?: string;
+  createdAt: Timestamp;
 }
 
+const initialMangaDetails = {
+  title: '',
+  description: '',
+  chapters: '',
+  status: 'Ongoing',
+  imageUrl: '',
+  genresInput: '', // For comma-separated genre string input
+  dataAiHint: '',
+};
+
 export default function ManageMangasPage() {
-  const [mangaDetails, setMangaDetails] = useState({
-    title: '',
-    description: '',
-    chapters: '', // Stored as string for input, convert to number on save
-    status: 'Ongoing',
-    imageUrl: '',
-  });
-  const [mangas, setMangas] = useState<Manga[]>([]); // This will come from Firestore
+  const [mangaDetails, setMangaDetails] = useState(initialMangaDetails);
+  const [mangas, setMangas] = useState<Manga[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const fetchMangas = async () => {
+    setIsLoading(true);
+    try {
+      const mangasCollection = collection(db, 'mangas');
+      const q = query(mangasCollection, orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const mangaslist = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Manga));
+      setMangas(mangaslist);
+    } catch (error) {
+      console.error("Error fetching mangas: ", error);
+      toast({ title: "Error", description: "Could not fetch mangas.", variant: "destructive" });
+    }
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchMangas();
+  }, []);
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setMangaDetails(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleAddManga = (e: React.FormEvent) => {
+  const handleAddManga = async (e: FormEvent) => {
     e.preventDefault();
     if (!mangaDetails.title.trim() || !mangaDetails.imageUrl.trim()) {
        toast({ title: "Error", description: "Title and Image URL are required.", variant: "destructive" });
       return;
     }
-    // In a real app, this would save to Firestore
-    const newManga: Manga = {
-      id: Date.now().toString(),
-      title: mangaDetails.title,
-      description: mangaDetails.description,
-      chapters: parseInt(mangaDetails.chapters) || 0,
-      status: mangaDetails.status,
-      imageUrl: mangaDetails.imageUrl,
-    };
-    setMangas([...mangas, newManga]);
-    toast({ title: "Manga Added (UI Only)", description: `Manga "${newManga.title}" added. Data not saved.` });
-    setMangaDetails({ title: '', description: '', chapters: '', status: 'Ongoing', imageUrl: '' }); // Reset form
+    
+    const genresArray = mangaDetails.genresInput.split(',').map(g => g.trim()).filter(g => g);
+
+    try {
+      await addDoc(collection(db, 'mangas'), {
+        title: mangaDetails.title.trim(),
+        description: mangaDetails.description.trim(),
+        chapters: parseInt(mangaDetails.chapters) || 0,
+        status: mangaDetails.status,
+        imageUrl: mangaDetails.imageUrl.trim(),
+        genres: genresArray,
+        dataAiHint: mangaDetails.dataAiHint.trim() || undefined,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(), // Keep updatedAt for sorting/filtering later
+      });
+      toast({ title: "Manga Added", description: `Manga "${mangaDetails.title}" added successfully.` });
+      setMangaDetails(initialMangaDetails); // Reset form
+      fetchMangas(); // Refresh list
+    } catch (error) {
+      console.error("Error adding manga: ", error);
+      toast({ title: "Error", description: "Could not add manga.", variant: "destructive" });
+    }
   };
+  
+  const handleDeleteManga = async (mangaId: string, title: string) => {
+    if (!confirm(`Are you sure you want to delete manga "${title}"? This action cannot be undone.`)) {
+        return;
+    }
+    try {
+        await deleteDoc(doc(db, "mangas", mangaId));
+        toast({ title: "Manga Deleted", description: `Manga "${title}" deleted successfully.` });
+        fetchMangas(); // Refresh list
+    } catch (error) {
+        console.error("Error deleting manga: ", error);
+        toast({ title: "Error", description: "Could not delete manga.", variant: "destructive" });
+    }
+  };
+
 
   return (
     <div className="space-y-8">
@@ -87,7 +143,6 @@ export default function ManageMangasPage() {
               </div>
               <div>
                 <Label htmlFor="status" className="text-neutral-extralight">Status</Label>
-                {/* Basic select for now, can be ShadCN select later */}
                 <select 
                     id="status" 
                     name="status" 
@@ -105,7 +160,14 @@ export default function ManageMangasPage() {
               <Label htmlFor="imageUrl" className="text-neutral-extralight">Image URL (Cover)</Label>
               <Input id="imageUrl" name="imageUrl" type="url" value={mangaDetails.imageUrl} onChange={handleChange} placeholder="https://placehold.co/300x450.png" required className="bg-neutral-light text-neutral-extralight" />
             </div>
-            {/* Genre selection will be added later with multi-select component */}
+             <div>
+              <Label htmlFor="genresInput" className="text-neutral-extralight">Genres (comma-separated)</Label>
+              <Input id="genresInput" name="genresInput" type="text" value={mangaDetails.genresInput} onChange={handleChange} placeholder="e.g., Action, Fantasy, Adventure" className="bg-neutral-light text-neutral-extralight" />
+            </div>
+            <div>
+              <Label htmlFor="dataAiHint" className="text-neutral-extralight">AI Image Hint (Optional)</Label>
+              <Input id="dataAiHint" name="dataAiHint" type="text" value={mangaDetails.dataAiHint} onChange={handleChange} placeholder="e.g., epic battle anime" className="bg-neutral-light text-neutral-extralight" />
+            </div>
             <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white">
               Add Manga
             </Button>
@@ -119,21 +181,40 @@ export default function ManageMangasPage() {
             <List className="mr-2 h-5 w-5 text-brand-primary" /> Existing Mangas
           </CardTitle>
            <CardDescription className="text-neutral-extralight/80">
-            List of mangas. (Data persistence not yet implemented)
+            List of mangas currently in the catalog.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {mangas.length === 0 ? (
+          {isLoading ? (
+             <p className="text-neutral-extralight/70">Loading mangas...</p>
+          ) : mangas.length === 0 ? (
             <p className="text-neutral-extralight/70">No mangas added yet.</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {mangas.map((manga) => (
-                <Card key={manga.id} className="bg-neutral-light overflow-hidden">
-                  <img src={manga.imageUrl || 'https://placehold.co/300x450.png'} alt={manga.title} className="w-full h-48 object-cover"/>
+                <Card key={manga.id} className="bg-neutral-light overflow-hidden shadow-md">
+                  <div className="relative w-full h-48">
+                    <Image 
+                        src={manga.imageUrl || 'https://placehold.co/300x450.png'} 
+                        alt={manga.title} 
+                        layout="fill"
+                        objectFit="cover"
+                        data-ai-hint={manga.dataAiHint || "manga cover"}
+                    />
+                  </div>
                   <CardContent className="p-3">
-                    <h3 className="font-semibold text-white truncate">{manga.title}</h3>
+                    <h3 className="font-semibold text-white truncate" title={manga.title}>{manga.title}</h3>
                     <p className="text-xs text-neutral-extralight/80">{manga.status} - {manga.chapters} Chapters</p>
-                    <Button variant="link" size="sm" className="text-red-400 p-0 h-auto mt-1">Delete (UI Only)</Button>
+                    <p className="text-xs text-neutral-extralight/70 truncate" title={manga.genres.join(', ')}>Genres: {manga.genres.join(', ')}</p>
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-red-400 hover:text-red-300 hover:bg-neutral-medium/50 p-1 mt-1 h-auto w-auto"
+                        onClick={() => handleDeleteManga(manga.id, manga.title)}
+                        aria-label={`Delete ${manga.title}`}
+                    >
+                        <Trash2 className="h-4 w-4 mr-1" /> Delete
+                    </Button>
                   </CardContent>
                 </Card>
               ))}

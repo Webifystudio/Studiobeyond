@@ -4,11 +4,60 @@ import { Footer } from '@/components/layout/footer';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { MangaGrid } from '@/components/manga/manga-grid';
+import { MangaGrid, type MangaItem } from '@/components/manga/manga-grid';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 
-const latestManga: any[] = []; // Data to be fetched from Firestore
+interface MangaDoc {
+  id: string;
+  title: string;
+  chapters: number;
+  status: string;
+  imageUrl: string;
+  dataAiHint?: string;
+  updatedAt: Timestamp; // Expecting updatedAt for sorting
+}
 
-export default function LatestUpdatesPage() {
+async function getLatestManga(): Promise<MangaItem[]> {
+  try {
+    // Fetch latest 12 manga by 'updatedAt' or 'createdAt'
+    const latestQuery = query(collection(db, 'mangas'), orderBy('updatedAt', 'desc'), limit(12));
+    const snapshot = await getDocs(latestQuery);
+    
+    if (snapshot.empty) { // Fallback to createdAt if updatedAt yields no results
+        const fallbackQuery = query(collection(db, 'mangas'), orderBy('createdAt', 'desc'), limit(12));
+        const fallbackSnapshot = await getDocs(fallbackQuery);
+        return fallbackSnapshot.docs.map(doc => {
+            const data = doc.data() as Omit<MangaDoc, 'id'>;
+            return {
+            id: doc.id,
+            title: data.title,
+            chapter: `${data.status} - ${data.chapters} Ch.`,
+            imageUrl: data.imageUrl,
+            dataAiHint: data.dataAiHint,
+            };
+        });
+    }
+
+    return snapshot.docs.map(doc => {
+      const data = doc.data() as Omit<MangaDoc, 'id'>;
+      return {
+        id: doc.id,
+        title: data.title,
+        chapter: `${data.status} - ${data.chapters} Ch.`,
+        imageUrl: data.imageUrl,
+        dataAiHint: data.dataAiHint,
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching latest manga: ", error);
+    return [];
+  }
+}
+
+export default async function LatestUpdatesPage() {
+  const latestManga = await getLatestManga();
+
   return (
     <div className="flex flex-col min-h-screen bg-neutral-dark">
       <Header />
@@ -23,7 +72,7 @@ export default function LatestUpdatesPage() {
         ) : (
           <div className="text-center">
             <h1 className="text-3xl font-bold text-white mb-4 font-headline">Latest Updates</h1>
-            <p className="text-neutral-extralight">Latest manga updates will appear here once added through the admin panel.</p>
+            <p className="text-neutral-extralight">No manga updates found. Add new manga or update existing ones through the admin panel.</p>
           </div>
         )}
       </main>

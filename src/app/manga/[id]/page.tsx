@@ -1,3 +1,4 @@
+
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { summarizeReviews, type SummarizeReviewsInput, type SummarizeReviewsOutput } from '@/ai/flows/summarize-reviews';
@@ -6,56 +7,79 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, Timestamp, collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import type { MangaItem as MangaCardItem } from '@/components/manga/manga-grid'; // For related manga
+import { MangaGrid } from '@/components/manga/manga-grid';
+
 
 interface MangaPageProps {
   params: { id: string };
 }
 
-// Mock data fetching function
-async function getMangaDetails(id: string) {
-  // In a real app, you'd fetch this from a database or API
-  if (id === 'attack-on-titan') {
-    return {
-      id: 'attack-on-titan',
-      title: 'Attack on Titan',
-      description: 'In a world where humanity resides within enormous walled cities to protect themselves from gigantic humanoid creatures known as Titans, a young man named Eren Yeager vows to exterminate the Titans after they bring about a devastating loss.',
-      imageUrl: 'https://placehold.co/400x600/1A202C/A0AEC0.png',
-      dataAiHint: 'titan battle anime',
-      chapters: 139,
-      status: 'Completed',
-      genres: ['Action', 'Dark Fantasy', 'Post-apocalyptic'],
-      reviews: [
-        "The story is incredible, full of twists and turns.",
-        "Character development is top-notch. You really feel for them.",
-        "Pacing can be slow at times, but the payoff is worth it.",
-        "Art style is unique and improves over time.",
-        "Some plot points felt rushed towards the end.",
-        "An absolute masterpiece of storytelling.",
-        "The ending was controversial for some fans."
-      ],
-      externalReadLink: 'https://example.com/read/attack-on-titan' // Placeholder external link
-    };
-  }
-  // Fallback for other IDs
-  return {
-      id: id,
-      title: `Manga: ${id.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}`,
-      description: 'This is a sample description for the manga. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.',
-      imageUrl: 'https://placehold.co/400x600/1A202C/A0AEC0.png',
-      dataAiHint: 'manga cover generic',
-      chapters: Math.floor(Math.random() * 200) + 50,
-      status: Math.random() > 0.5 ? 'Ongoing' : 'Completed',
-      genres: ['Action', 'Fantasy', 'Adventure'],
-      reviews: [
-        "This manga is pretty good, I enjoyed the art.",
-        "The plot is engaging and keeps you hooked.",
-        "Characters are well-written and relatable.",
-        "Sometimes the story drags a bit.",
-        "Overall a solid read, would recommend."
-      ],
-      externalReadLink: `https://example.com/read/${id}`
-  };
+interface MangaDoc {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  dataAiHint?: string;
+  chapters: number;
+  status: string;
+  genres: string[];
+  reviews?: string[]; // Optional for now, can be a subcollection
+  externalReadLink?: string; // Optional
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
+
+
+async function getMangaDetails(id: string): Promise<MangaDoc | null> {
+  try {
+    const mangaRef = doc(db, 'mangas', id);
+    const mangaSnap = await getDoc(mangaRef);
+
+    if (mangaSnap.exists()) {
+      return { id: mangaSnap.id, ...mangaSnap.data() } as MangaDoc;
+    } else {
+      console.log(`No manga found with ID: ${id}`);
+      return null;
+    }
+  } catch (error) {
+    console.error("Error fetching manga details: ", error);
+    return null;
+  }
+}
+
+async function getRelatedManga(currentMangaId: string, genres: string[], limitCount: number = 5): Promise<MangaCardItem[]> {
+  if (!genres || genres.length === 0) return [];
+  try {
+    // Fetch manga that share at least one genre, are not the current manga, and limit the results.
+    // This is a simplified approach. More complex recommendations would require a different strategy.
+    const q = query(
+      collection(db, "mangas"),
+      where("genres", "array-contains-any", genres.slice(0, 10)), // Firestore array-contains-any limit is 10
+      orderBy("createdAt", "desc"), // Or some other relevance metric
+      limit(limitCount + 1) // Fetch one more to exclude current if it appears
+    );
+    const querySnapshot = await getDocs(q);
+    const related = querySnapshot.docs
+      .map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as MangaDoc))
+      .filter(manga => manga.id !== currentMangaId) // Exclude the current manga
+      .slice(0, limitCount) // Ensure only limitCount items
+      .map(manga => ({
+        id: manga.id,
+        title: manga.title,
+        chapter: `${manga.status} - ${manga.chapters} Ch.`,
+        imageUrl: manga.imageUrl,
+        dataAiHint: manga.dataAiHint,
+      }));
+    return related;
+  } catch (error) {
+    console.error("Error fetching related manga:", error);
+    return [];
+  }
+}
+
 
 export default async function MangaDetailPage({ params }: MangaPageProps) {
   const manga = await getMangaDetails(params.id);
@@ -65,7 +89,15 @@ export default async function MangaDetailPage({ params }: MangaPageProps) {
       <div className="flex flex-col min-h-screen bg-neutral-dark">
         <Header />
         <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow flex items-center justify-center">
-          <h1 className="text-2xl text-white">Manga not found.</h1>
+          <div>
+            <Button variant="outline" asChild className="mb-6">
+              <Link href="/">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
+              </Link>
+            </Button>
+            <h1 className="text-2xl text-white text-center">Manga not found.</h1>
+            <p className="text-neutral-extralight text-center">It might have been moved or does not exist.</p>
+          </div>
         </main>
         <Footer />
       </div>
@@ -73,12 +105,14 @@ export default async function MangaDetailPage({ params }: MangaPageProps) {
   }
 
   let reviewSummary: SummarizeReviewsOutput | null = null;
+  const reviewsToSummarize = manga.reviews && manga.reviews.length > 0 ? manga.reviews : ["No user reviews available for this manga yet."];
   try {
-    reviewSummary = await summarizeReviews({ reviews: manga.reviews, mangaTitle: manga.title });
+    reviewSummary = await summarizeReviews({ reviews: reviewsToSummarize, mangaTitle: manga.title });
   } catch (error) {
     console.error("Failed to summarize reviews:", error);
-    // Handle error, e.g. show a message to the user or log it
   }
+  
+  const relatedManga = await getRelatedManga(manga.id, manga.genres);
 
   return (
     <div className="flex flex-col min-h-screen bg-neutral-dark">
@@ -96,35 +130,42 @@ export default async function MangaDetailPage({ params }: MangaPageProps) {
               {manga.status} - {manga.chapters} Chapters
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid md:grid-cols-3 gap-6">
+          <CardContent className="grid md:grid-cols-3 gap-6 lg:gap-8">
             <div className="md:col-span-1">
-              <Image
-                src={manga.imageUrl}
-                alt={manga.title}
-                width={400}
-                height={600}
-                className="rounded-lg shadow-md w-full h-auto object-cover"
-                data-ai-hint={manga.dataAiHint}
-              />
-              <Button asChild size="lg" className="w-full mt-4 bg-brand-primary hover:bg-brand-primary/80 text-white">
-                <Link href={manga.externalReadLink} target="_blank" rel="noopener noreferrer">
-                  Read Externally
-                </Link>
-              </Button>
+              <div className="aspect-[2/3] relative w-full rounded-lg shadow-md overflow-hidden">
+                <Image
+                  src={manga.imageUrl || 'https://placehold.co/400x600.png'}
+                  alt={manga.title}
+                  layout="fill"
+                  objectFit="cover"
+                  className="w-full h-full"
+                  data-ai-hint={manga.dataAiHint || "manga cover detail"}
+                  priority // Prioritize loading cover image
+                />
+              </div>
+              {manga.externalReadLink && (
+                <Button asChild size="lg" className="w-full mt-4 bg-brand-primary hover:bg-brand-primary/80 text-white">
+                  <Link href={manga.externalReadLink} target="_blank" rel="noopener noreferrer">
+                    Read Externally
+                  </Link>
+                </Button>
+              )}
             </div>
             <div className="md:col-span-2 space-y-6">
               <div>
                 <h2 className="text-xl font-semibold text-white mb-2 font-headline">Description</h2>
-                <p className="text-neutral-extralight/90 font-body">{manga.description}</p>
+                <p className="text-neutral-extralight/90 font-body whitespace-pre-line">{manga.description || "No description available."}</p>
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-white mb-2 font-headline">Genres</h2>
                 <div className="flex flex-wrap gap-2">
-                  {manga.genres.map(genre => (
-                    <span key={genre} className="bg-neutral-light text-neutral-extralight px-3 py-1 rounded-full text-sm font-body">
-                      {genre}
-                    </span>
-                  ))}
+                  {manga.genres && manga.genres.length > 0 ? manga.genres.map(genre => (
+                    <Link key={genre} href={`/genre/${encodeURIComponent(genre.toLowerCase())}`} legacyBehavior>
+                      <a className="bg-neutral-light text-neutral-extralight px-3 py-1 rounded-full text-sm font-body hover:bg-brand-primary/30 hover:text-brand-primary transition-colors">
+                        {genre}
+                      </a>
+                    </Link>
+                  )) : <span className="text-neutral-extralight/70 font-body">No genres listed.</span>}
                 </div>
               </div>
               {reviewSummary && (
@@ -154,24 +195,45 @@ export default async function MangaDetailPage({ params }: MangaPageProps) {
                   </div>
                 </div>
               )}
-               <div>
-                  <h2 className="text-xl font-semibold text-white mb-3 font-headline">Original Reviews</h2>
-                  <div className="space-y-2 max-h-60 overflow-y-auto bg-neutral-light p-4 rounded-lg">
-                    {manga.reviews.map((review, index) => (
-                      <p key={`review-${index}`} className="text-neutral-extralight/80 border-b border-neutral-medium pb-1 mb-1 text-sm font-body">
-                        "{review}"
-                      </p>
-                    ))}
-                  </div>
-              </div>
+               {manga.reviews && manga.reviews.length > 0 && (
+                 <div>
+                    <h2 className="text-xl font-semibold text-white mb-3 font-headline">Original Reviews</h2>
+                    <div className="space-y-2 max-h-60 overflow-y-auto bg-neutral-light p-4 rounded-lg">
+                      {manga.reviews.map((review, index) => (
+                        <p key={`review-${index}`} className="text-neutral-extralight/80 border-b border-neutral-medium pb-1 mb-1 text-sm font-body">
+                          "{review}"
+                        </p>
+                      ))}
+                    </div>
+                </div>
+               )}
             </div>
           </CardContent>
         </Card>
+
+        {relatedManga.length > 0 && (
+          <div className="mt-12">
+            <MangaGrid title="Related Manga" mangaList={relatedManga} />
+          </div>
+        )}
       </main>
       <Footer />
     </div>
   );
 }
 
-// Add revalidate strategy if data can change frequently
-// export const revalidate = 3600; // Revalidate every hour
+export async function generateStaticParams() {
+  try {
+    // Fetch a few recent manga to pre-render their pages
+    const q = query(collection(db, "mangas"), orderBy("createdAt", "desc"), limit(10)); // Limit to avoid too many static pages
+    const mangaSnapshot = await getDocs(q);
+    return mangaSnapshot.docs.map((doc) => ({
+      id: doc.id,
+    }));
+  } catch (error) {
+    console.error("Error generating static params for manga details:", error);
+    return [];
+  }
+}
+
+export const revalidate = 3600; // Revalidate page every hour

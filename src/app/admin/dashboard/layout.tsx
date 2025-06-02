@@ -27,21 +27,22 @@ export default function AdminDashboardLayout({
 
   useEffect(() => {
     setIsMounted(true);
-    if (localStorage.getItem('isAdminAuthenticated') !== 'true') {
+    if (typeof window !== 'undefined' && localStorage.getItem('isAdminAuthenticated') !== 'true') {
       router.replace('/admin/login');
     }
   }, [router]);
 
   const handleLogout = () => {
-    localStorage.removeItem('isAdminAuthenticated');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('isAdminAuthenticated');
+    }
     router.push('/admin/login');
   };
 
-  if (!isMounted || localStorage.getItem('isAdminAuthenticated') !== 'true') {
+  if (!isMounted || (typeof window !== 'undefined' && localStorage.getItem('isAdminAuthenticated') !== 'true')) {
     return (
         <div className="flex items-center justify-center min-h-screen bg-neutral-dark">
             <p className="text-white">Loading or redirecting...</p>
-            {/* You can add a spinner here */}
         </div>
     );
   }
@@ -51,7 +52,7 @@ export default function AdminDashboardLayout({
       <aside className="w-64 bg-neutral-medium border-r border-neutral-light p-4 flex flex-col">
         <div className="mb-8">
           <Link href="/admin/dashboard" className="text-2xl font-bold text-brand-primary font-inter">
-            Admin Panel
+            BEYOND SCANS Admin
           </Link>
         </div>
         <ScrollArea className="flex-grow">

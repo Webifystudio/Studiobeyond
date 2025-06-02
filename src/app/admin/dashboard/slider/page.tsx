@@ -1,14 +1,17 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, List } from 'lucide-react';
+import { PlusCircle, List, Trash2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { db, serverTimestamp } from '@/lib/firebase';
+import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, Timestamp } from 'firebase/firestore';
+import Image from 'next/image';
 
 interface SliderItem {
   id: string;
@@ -18,35 +21,83 @@ interface SliderItem {
   buttonText: string;
   buttonHref: string;
   dataAiHint?: string;
+  createdAt: Timestamp;
 }
 
+const initialItemDetails: Omit<SliderItem, 'id' | 'createdAt'> = {
+  title: '',
+  description: '',
+  imageUrl: '',
+  buttonText: 'Read Now',
+  buttonHref: '/',
+  dataAiHint: '',
+};
+
 export default function ManageSliderPage() {
-  const [itemDetails, setItemDetails] = useState<Omit<SliderItem, 'id'>>({
-    title: '',
-    description: '',
-    imageUrl: '',
-    buttonText: 'Read Now',
-    buttonHref: '/',
-    dataAiHint: '',
-  });
-  const [sliderItems, setSliderItems] = useState<SliderItem[]>([]); // This will come from Firestore
+  const [itemDetails, setItemDetails] = useState<Omit<SliderItem, 'id' | 'createdAt'>>(initialItemDetails);
+  const [sliderItems, setSliderItems] = useState<SliderItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const fetchSliderItems = async () => {
+    setIsLoading(true);
+    try {
+      const sliderCollection = collection(db, 'sliderItems');
+      const q = query(sliderCollection, orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const itemsList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as SliderItem));
+      setSliderItems(itemsList);
+    } catch (error) {
+      console.error("Error fetching slider items: ", error);
+      toast({ title: "Error", description: "Could not fetch slider items.", variant: "destructive" });
+    }
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchSliderItems();
+  }, []);
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setItemDetails(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleAddItem = (e: React.FormEvent) => {
+  const handleAddItem = async (e: FormEvent) => {
     e.preventDefault();
     if (!itemDetails.title.trim() || !itemDetails.imageUrl.trim()) {
       toast({ title: "Error", description: "Title and Image URL are required.", variant: "destructive" });
       return;
     }
-    const newItem: SliderItem = { id: Date.now().toString(), ...itemDetails };
-    setSliderItems([...sliderItems, newItem]);
-    toast({ title: "Slider Item Added (UI Only)", description: `Item "${newItem.title}" added. Data not saved.` });
-    setItemDetails({ title: '', description: '', imageUrl: '', buttonText: 'Read Now', buttonHref: '/', dataAiHint: '' }); // Reset form
+    try {
+      await addDoc(collection(db, 'sliderItems'), {
+        ...itemDetails,
+        createdAt: serverTimestamp()
+      });
+      toast({ title: "Slider Item Added", description: `Item "${itemDetails.title}" added successfully.` });
+      setItemDetails(initialItemDetails); // Reset form
+      fetchSliderItems(); // Refresh list
+    } catch (error) {
+      console.error("Error adding slider item: ", error);
+      toast({ title: "Error", description: "Could not add slider item.", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteItem = async (itemId: string, title: string) => {
+     if (!confirm(`Are you sure you want to delete slider item "${title}"? This action cannot be undone.`)) {
+        return;
+    }
+    try {
+        await deleteDoc(doc(db, "sliderItems", itemId));
+        toast({ title: "Slider Item Deleted", description: `Item "${title}" deleted successfully.` });
+        fetchSliderItems(); // Refresh list
+    } catch (error) {
+        console.error("Error deleting slider item: ", error);
+        toast({ title: "Error", description: "Could not delete slider item.", variant: "destructive" });
+    }
   };
 
   return (
@@ -103,24 +154,43 @@ export default function ManageSliderPage() {
             <List className="mr-2 h-5 w-5 text-brand-primary" /> Current Slider Items
           </CardTitle>
           <CardDescription className="text-neutral-extralight/80">
-            List of items for the hero slider. (Data persistence not yet implemented)
+            List of items for the hero slider.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {sliderItems.length === 0 ? (
+          {isLoading ? (
+            <p className="text-neutral-extralight/70">Loading slider items...</p>
+          ) : sliderItems.length === 0 ? (
             <p className="text-neutral-extralight/70">No slider items added yet.</p>
           ) : (
             <div className="space-y-3">
               {sliderItems.map((item) => (
-                <Card key={item.id} className="bg-neutral-light p-3">
-                  <div className="flex gap-3">
-                    <img src={item.imageUrl || 'https://placehold.co/150x80.png'} alt={item.title} className="w-32 h-auto object-cover rounded"/>
-                    <div className="flex-1">
-                        <h3 className="font-semibold text-white">{item.title}</h3>
-                        <p className="text-xs text-neutral-extralight/80 truncate">{item.description}</p>
-                        <p className="text-xs text-neutral-extralight/70">Button: "{item.buttonText}" to {item.buttonHref}</p>
+                <Card key={item.id} className="bg-neutral-light p-3 shadow">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="relative w-full sm:w-40 h-24 sm:h-auto rounded overflow-hidden shrink-0">
+                        <Image 
+                            src={item.imageUrl || 'https://placehold.co/150x80.png'} 
+                            alt={item.title} 
+                            layout="fill" 
+                            objectFit="cover"
+                            data-ai-hint={item.dataAiHint || "slider image"}
+                        />
                     </div>
-                     <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-300 self-start">Delete (UI Only)</Button>
+                    <div className="flex-1">
+                        <h3 className="font-semibold text-white" title={item.title}>{item.title}</h3>
+                        <p className="text-xs text-neutral-extralight/80 truncate" title={item.description}>{item.description}</p>
+                        <p className="text-xs text-neutral-extralight/70">Button: "{item.buttonText}" to {item.buttonHref}</p>
+                        {item.dataAiHint && <p className="text-xs text-neutral-extralight/60">AI Hint: {item.dataAiHint}</p>}
+                    </div>
+                     <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-red-400 hover:text-red-300 hover:bg-neutral-medium/50 self-start sm:self-center"
+                        onClick={() => handleDeleteItem(item.id, item.title)}
+                        aria-label={`Delete ${item.title}`}
+                     >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </Card>
               ))}
