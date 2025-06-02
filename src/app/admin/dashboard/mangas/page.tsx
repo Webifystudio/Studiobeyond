@@ -7,11 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, List, Trash2 } from 'lucide-react';
+import { PlusCircle, List, Trash2, ExternalLink } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { db, serverTimestamp } from '@/lib/firebase';
-import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, Timestamp, DocumentData } from 'firebase/firestore';
 import Image from 'next/image';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface Manga {
   id: string;
@@ -20,9 +21,16 @@ interface Manga {
   chapters: number;
   status: string;
   imageUrl: string;
-  genres: string[]; // Storing genre names as an array of strings for simplicity
+  genres: string[];
   dataAiHint?: string;
+  externalReadLink?: string;
   createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+interface Genre {
+  id: string;
+  name: string;
 }
 
 const initialMangaDetails = {
@@ -31,21 +39,24 @@ const initialMangaDetails = {
   chapters: '',
   status: 'Ongoing',
   imageUrl: '',
-  genresInput: '', // For comma-separated genre string input
+  selectedGenres: [] as string[],
   dataAiHint: '',
+  externalReadLink: '',
 };
 
 export default function ManageMangasPage() {
   const [mangaDetails, setMangaDetails] = useState(initialMangaDetails);
   const [mangas, setMangas] = useState<Manga[]>([]);
+  const [allGenres, setAllGenres] = useState<Genre[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFetchingGenres, setIsFetchingGenres] = useState(true);
   const { toast } = useToast();
 
   const fetchMangas = async () => {
     setIsLoading(true);
     try {
       const mangasCollection = collection(db, 'mangas');
-      const q = query(mangasCollection, orderBy('createdAt', 'desc'));
+      const q = query(mangasCollection, orderBy('updatedAt', 'desc'));
       const querySnapshot = await getDocs(q);
       const mangaslist = querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -59,13 +70,41 @@ export default function ManageMangasPage() {
     setIsLoading(false);
   };
 
+  const fetchAllGenres = async () => {
+    setIsFetchingGenres(true);
+    try {
+      const genresCollection = collection(db, 'genres');
+      const q = query(genresCollection, orderBy('name', 'asc'));
+      const querySnapshot = await getDocs(q);
+      const genresList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        name: doc.data().name,
+      } as Genre));
+      setAllGenres(genresList);
+    } catch (error) {
+      console.error("Error fetching genres: ", error);
+      toast({ title: "Error", description: "Could not fetch genres for selection.", variant: "destructive" });
+    }
+    setIsFetchingGenres(false);
+  };
+
   useEffect(() => {
     fetchMangas();
+    fetchAllGenres();
   }, []);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setMangaDetails(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleGenreChange = (genreName: string) => {
+    setMangaDetails(prev => {
+      const newSelectedGenres = prev.selectedGenres.includes(genreName)
+        ? prev.selectedGenres.filter(g => g !== genreName)
+        : [...prev.selectedGenres, genreName];
+      return { ...prev, selectedGenres: newSelectedGenres };
+    });
   };
 
   const handleAddManga = async (e: FormEvent) => {
@@ -75,8 +114,6 @@ export default function ManageMangasPage() {
       return;
     }
     
-    const genresArray = mangaDetails.genresInput.split(',').map(g => g.trim()).filter(g => g);
-
     try {
       await addDoc(collection(db, 'mangas'), {
         title: mangaDetails.title.trim(),
@@ -84,10 +121,11 @@ export default function ManageMangasPage() {
         chapters: parseInt(mangaDetails.chapters) || 0,
         status: mangaDetails.status,
         imageUrl: mangaDetails.imageUrl.trim(),
-        genres: genresArray,
+        genres: mangaDetails.selectedGenres,
         dataAiHint: mangaDetails.dataAiHint.trim() || undefined,
+        externalReadLink: mangaDetails.externalReadLink.trim() || undefined,
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(), // Keep updatedAt for sorting/filtering later
+        updatedAt: serverTimestamp(),
       });
       toast({ title: "Manga Added", description: `Manga "${mangaDetails.title}" added successfully.` });
       setMangaDetails(initialMangaDetails); // Reset form
@@ -159,10 +197,33 @@ export default function ManageMangasPage() {
             <div>
               <Label htmlFor="imageUrl" className="text-neutral-extralight">Image URL (Cover)</Label>
               <Input id="imageUrl" name="imageUrl" type="url" value={mangaDetails.imageUrl} onChange={handleChange} placeholder="https://placehold.co/300x450.png" required className="bg-neutral-light text-neutral-extralight" />
+              <p className="text-xs text-neutral-extralight/70 mt-1">
+                Upload your image to a service like <a href="https://imgbb.com/" target="_blank" rel="noopener noreferrer" className="text-brand-primary hover:underline">ImgBB</a> and paste the direct image URL here.
+              </p>
             </div>
-             <div>
-              <Label htmlFor="genresInput" className="text-neutral-extralight">Genres (comma-separated)</Label>
-              <Input id="genresInput" name="genresInput" type="text" value={mangaDetails.genresInput} onChange={handleChange} placeholder="e.g., Action, Fantasy, Adventure" className="bg-neutral-light text-neutral-extralight" />
+            <div>
+              <Label className="text-neutral-extralight">Genres</Label>
+              {isFetchingGenres ? <p className="text-neutral-extralight/70">Loading genres...</p> : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 p-2 border border-neutral-light rounded-md bg-neutral-light max-h-40 overflow-y-auto">
+                  {allGenres.length > 0 ? allGenres.map(genre => (
+                    <div key={genre.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`genre-${genre.id}`}
+                        checked={mangaDetails.selectedGenres.includes(genre.name)}
+                        onCheckedChange={() => handleGenreChange(genre.name)}
+                        className="border-neutral-extralight data-[state=checked]:bg-brand-primary data-[state=checked]:text-white"
+                      />
+                      <Label htmlFor={`genre-${genre.id}`} className="text-sm font-medium text-neutral-extralight cursor-pointer">
+                        {genre.name}
+                      </Label>
+                    </div>
+                  )) : <p className="text-neutral-extralight/70 col-span-full">No genres found. Please add genres first.</p>}
+                </div>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="externalReadLink" className="text-neutral-extralight">External Read Link (Optional)</Label>
+              <Input id="externalReadLink" name="externalReadLink" type="url" value={mangaDetails.externalReadLink} onChange={handleChange} placeholder="https://example.com/read/manga-title" className="bg-neutral-light text-neutral-extralight" />
             </div>
             <div>
               <Label htmlFor="dataAiHint" className="text-neutral-extralight">AI Image Hint (Optional)</Label>
@@ -206,10 +267,15 @@ export default function ManageMangasPage() {
                     <h3 className="font-semibold text-white truncate" title={manga.title}>{manga.title}</h3>
                     <p className="text-xs text-neutral-extralight/80">{manga.status} - {manga.chapters} Chapters</p>
                     <p className="text-xs text-neutral-extralight/70 truncate" title={manga.genres.join(', ')}>Genres: {manga.genres.join(', ')}</p>
+                    {manga.externalReadLink && (
+                      <a href={manga.externalReadLink} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-primary hover:underline flex items-center mt-1">
+                         <ExternalLink className="h-3 w-3 mr-1" /> Read Externally
+                      </a>
+                    )}
                     <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="text-red-400 hover:text-red-300 hover:bg-neutral-medium/50 p-1 mt-1 h-auto w-auto"
+                        className="text-red-400 hover:text-red-300 hover:bg-neutral-medium/50 p-1 mt-2 h-auto w-auto"
                         onClick={() => handleDeleteManga(manga.id, manga.title)}
                         aria-label={`Delete ${manga.title}`}
                     >
@@ -225,3 +291,4 @@ export default function ManageMangasPage() {
     </div>
   );
 }
+

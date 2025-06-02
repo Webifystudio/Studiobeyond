@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, Timestamp, collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { doc, getDoc, Timestamp, collection, getDocs, query, orderBy, limit, where } from 'firebase/firestore';
 import type { MangaItem as MangaCardItem } from '@/components/manga/manga-grid'; // For related manga
 import { MangaGrid } from '@/components/manga/manga-grid';
 
@@ -26,8 +26,8 @@ interface MangaDoc {
   chapters: number;
   status: string;
   genres: string[];
-  reviews?: string[]; // Optional for now, can be a subcollection
-  externalReadLink?: string; // Optional
+  reviews?: string[]; 
+  externalReadLink?: string; 
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -53,19 +53,17 @@ async function getMangaDetails(id: string): Promise<MangaDoc | null> {
 async function getRelatedManga(currentMangaId: string, genres: string[], limitCount: number = 5): Promise<MangaCardItem[]> {
   if (!genres || genres.length === 0) return [];
   try {
-    // Fetch manga that share at least one genre, are not the current manga, and limit the results.
-    // This is a simplified approach. More complex recommendations would require a different strategy.
     const q = query(
       collection(db, "mangas"),
-      where("genres", "array-contains-any", genres.slice(0, 10)), // Firestore array-contains-any limit is 10
-      orderBy("createdAt", "desc"), // Or some other relevance metric
-      limit(limitCount + 1) // Fetch one more to exclude current if it appears
+      where("genres", "array-contains-any", genres.slice(0, 10)), 
+      orderBy("updatedAt", "desc"), 
+      limit(limitCount + 1) 
     );
     const querySnapshot = await getDocs(q);
     const related = querySnapshot.docs
       .map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as MangaDoc))
-      .filter(manga => manga.id !== currentMangaId) // Exclude the current manga
-      .slice(0, limitCount) // Ensure only limitCount items
+      .filter(manga => manga.id !== currentMangaId) 
+      .slice(0, limitCount) 
       .map(manga => ({
         id: manga.id,
         title: manga.title,
@@ -140,13 +138,13 @@ export default async function MangaDetailPage({ params }: MangaPageProps) {
                   objectFit="cover"
                   className="w-full h-full"
                   data-ai-hint={manga.dataAiHint || "manga cover detail"}
-                  priority // Prioritize loading cover image
+                  priority 
                 />
               </div>
               {manga.externalReadLink && (
                 <Button asChild size="lg" className="w-full mt-4 bg-brand-primary hover:bg-brand-primary/80 text-white">
                   <Link href={manga.externalReadLink} target="_blank" rel="noopener noreferrer">
-                    Read Externally
+                    <ExternalLink className="mr-2 h-5 w-5" /> Read Externally
                   </Link>
                 </Button>
               )}
@@ -224,8 +222,7 @@ export default async function MangaDetailPage({ params }: MangaPageProps) {
 
 export async function generateStaticParams() {
   try {
-    // Fetch a few recent manga to pre-render their pages
-    const q = query(collection(db, "mangas"), orderBy("createdAt", "desc"), limit(10)); // Limit to avoid too many static pages
+    const q = query(collection(db, "mangas"), orderBy("updatedAt", "desc"), limit(10)); 
     const mangaSnapshot = await getDocs(q);
     return mangaSnapshot.docs.map((doc) => ({
       id: doc.id,
@@ -236,4 +233,4 @@ export async function generateStaticParams() {
   }
 }
 
-export const revalidate = 3600; // Revalidate page every hour
+export const revalidate = 60; // Revalidate page every 60 seconds

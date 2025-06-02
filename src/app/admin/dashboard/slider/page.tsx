@@ -126,6 +126,9 @@ export default function ManageSliderPage() {
             <div>
               <Label htmlFor="imageUrl" className="text-neutral-extralight">Image URL (Large Landscape)</Label>
               <Input id="imageUrl" name="imageUrl" type="url" value={itemDetails.imageUrl} onChange={handleChange} placeholder="https://placehold.co/1200x500.png" required className="bg-neutral-light text-neutral-extralight" />
+              <p className="text-xs text-neutral-extralight/70 mt-1">
+                Upload your image to a service like <a href="https://imgbb.com/" target="_blank" rel="noopener noreferrer" className="text-brand-primary hover:underline">ImgBB</a> and paste the direct image URL here.
+              </p>
             </div>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
