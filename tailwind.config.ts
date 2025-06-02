@@ -12,6 +12,7 @@ export default {
       fontFamily: {
         body: ['Inter', 'sans-serif'],
         headline: ['Inter', 'sans-serif'],
+        inter: ['Inter', 'sans-serif'], // Added for direct use if needed
         code: ['monospace'],
       },
       colors: {
@@ -55,21 +56,21 @@ export default {
           '4': 'hsl(var(--chart-4))',
           '5': 'hsl(var(--chart-5))',
         },
-        sidebar: {
-          DEFAULT: 'hsl(var(--sidebar-background))',
-          foreground: 'hsl(var(--sidebar-foreground))',
-          primary: 'hsl(var(--sidebar-primary))',
-          'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-          accent: 'hsl(var(--sidebar-accent))',
-          'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-          border: 'hsl(var(--sidebar-border))',
-          ring: 'hsl(var(--sidebar-ring))',
-        },
+        // Custom colors from HTML, matching keys for easier reference
+        'brand-primary': 'hsl(var(--primary))', // #FF6B6B
+        'brand-secondary': '#4ECDC4', // For specific hovers like genre cards
+        'neutral-dark': 'hsl(var(--background))', // #1A202C / #1D232A
+        'neutral-medium': 'hsl(var(--card))', // #2D3748
+        'neutral-light': 'hsl(var(--secondary))', // #4A5568
+        'neutral-extralight': 'hsl(var(--foreground))', // #A0AEC0
       },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+        'xl': '1rem', // 16px
+        '2xl': '1.5rem', // 24px
+        '3xl': '2rem', // 32px
       },
       keyframes: {
         'accordion-down': {
