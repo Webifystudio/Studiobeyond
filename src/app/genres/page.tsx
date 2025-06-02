@@ -1,3 +1,4 @@
+
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { Button } from '@/components/ui/button';
@@ -5,22 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { GenreGrid } from '@/components/manga/genre-grid';
 
-
-const genres = [
-  { name: 'Action', href: '/genre/action' },
-  { name: 'Adventure', href: '/genre/adventure' },
-  { name: 'Comedy', href: '/genre/comedy' },
-  { name: 'Fantasy', href: '/genre/fantasy' },
-  { name: 'Romance', href: '/genre/romance' },
-  { name: 'Sci-Fi', href: '/genre/sci-fi' },
-  { name: 'Slice of Life', href: '/genre/slice-of-life' },
-  { name: 'Sports', href: '/genre/sports' },
-  { name: 'Horror', href: '/genre/horror' },
-  { name: 'Isekai', href: '/genre/isekai' },
-  { name: 'Drama', href: '/genre/drama' },
-  { name: 'Mystery', href: '/genre/mystery' },
-];
-
+const genres: any[] = []; // Data to be fetched from Firestore
 
 export default function GenresPage() {
   return (
@@ -32,7 +18,14 @@ export default function GenresPage() {
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
           </Link>
         </Button>
-        <GenreGrid title="All Genres" genres={genres} />
+        {genres.length > 0 ? (
+          <GenreGrid title="All Genres" genres={genres} />
+        ) : (
+            <div className="text-center">
+                <h1 className="text-3xl font-bold text-white mb-4 font-headline">All Genres</h1>
+                <p className="text-neutral-extralight">Genres will be listed here once added through the admin panel.</p>
+            </div>
+        )}
       </main>
       <Footer />
     </div>

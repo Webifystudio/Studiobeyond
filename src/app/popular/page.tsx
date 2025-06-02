@@ -1,3 +1,4 @@
+
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { Button } from '@/components/ui/button';
@@ -5,12 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { MangaGrid } from '@/components/manga/manga-grid';
 
-const popularManga = [
-  { id: 'jujutsu-kaisen-pop', title: 'Jujutsu Kaisen', chapter: 'Chapter 250', imageUrl: 'https://placehold.co/300x450/2D3748/A0AEC0.png', dataAiHint: 'sorcery fight anime' },
-  { id: 'one-piece-pop', title: 'One Piece', chapter: 'Chapter 1100', imageUrl: 'https://placehold.co/300x450/2D3748/A0AEC0.png', dataAiHint: 'pirate adventure anime' },
-  { id: 'spy-x-family-pop', title: 'Spy x Family', chapter: 'Chapter 95', imageUrl: 'https://placehold.co/300x450/2D3748/A0AEC0.png', dataAiHint: 'spy comedy anime' },
-  { id: 'chainsaw-man-pop', title: 'Chainsaw Man', chapter: 'Chapter 155', imageUrl: 'https://placehold.co/300x450/2D3748/A0AEC0.png', dataAiHint: 'devil hunter anime' },
-];
+const popularManga: any[] = []; // Data to be fetched from Firestore
 
 export default function PopularPage() {
   return (
@@ -22,7 +18,14 @@ export default function PopularPage() {
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
           </Link>
         </Button>
-        <MangaGrid title="Popular Manga" mangaList={popularManga} />
+        {popularManga.length > 0 ? (
+            <MangaGrid title="Popular Manga" mangaList={popularManga} />
+        ) : (
+            <div className="text-center">
+                <h1 className="text-3xl font-bold text-white mb-4 font-headline">Popular Manga</h1>
+                <p className="text-neutral-extralight">Popular manga will appear here once content is available.</p>
+            </div>
+        )}
       </main>
       <Footer />
     </div>

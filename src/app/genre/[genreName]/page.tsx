@@ -1,3 +1,4 @@
+
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { Button } from '@/components/ui/button';
@@ -9,18 +10,8 @@ interface GenrePageProps {
   params: { genreName: string };
 }
 
-// Mock data for demonstration
-const mangaByGenre: { [key: string]: any[] } = {
-  action: [
-    { id: 'action-manga-1', title: 'Action Manga Alpha', chapter: 'Chapter 50', imageUrl: 'https://placehold.co/300x450/2D3748/A0AEC0.png', dataAiHint:'action anime' },
-    { id: 'action-manga-2', title: 'Action Manga Beta', chapter: 'Chapter 75', imageUrl: 'https://placehold.co/300x450/2D3748/A0AEC0.png', dataAiHint:'action manga' },
-  ],
-  adventure: [
-    { id: 'adventure-manga-1', title: 'Adventure Manga Gamma', chapter: 'Chapter 100', imageUrl: 'https://placehold.co/300x450/2D3748/A0AEC0.png', dataAiHint:'adventure anime' },
-  ],
-  // Add more genres and manga as needed
-};
-
+// Mock data removed, to be replaced with Firestore fetching
+const mangaByGenre: { [key: string]: any[] } = {};
 
 export default function GenreSpecificPage({ params }: GenrePageProps) {
   const genreName = decodeURIComponent(params.genreName);
@@ -41,7 +32,7 @@ export default function GenreSpecificPage({ params }: GenrePageProps) {
         ) : (
             <div className="text-center">
                 <h1 className="text-3xl font-bold text-white mb-4 font-headline">{capitalizedGenreName} Manga</h1>
-                <p className="text-neutral-extralight">No manga found for this genre currently.</p>
+                <p className="text-neutral-extralight">No manga found for this genre. Content will be populated from the admin panel.</p>
             </div>
         )}
       </main>
@@ -51,7 +42,8 @@ export default function GenreSpecificPage({ params }: GenrePageProps) {
 }
 
 export async function generateStaticParams() {
-  const genres = ['action', 'adventure', 'comedy', 'fantasy', 'romance', 'sci-fi', 'slice-of-life', 'sports', 'horror', 'isekai', 'drama', 'mystery'];
+  // This should be dynamically generated from Firestore in the future
+  const genres: string[] = []; // Empty for now, will be populated from DB
   return genres.map((genreName) => ({
     genreName: genreName,
   }));

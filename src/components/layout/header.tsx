@@ -1,12 +1,14 @@
+
 "use client";
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, UserCircle2, Menu as MenuIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
+import { usePathname } from 'next/navigation';
 
 const navItems = [
   { href: '/', label: 'Home' },
@@ -18,6 +20,12 @@ const navItems = [
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Close mobile menu on navigation
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   return (
     <header className="bg-neutral-medium shadow-lg sticky top-0 z-50">
@@ -58,23 +66,23 @@ export function Header() {
                   <MenuIcon className="w-7 h-7" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="bg-neutral-medium text-neutral-extralight p-0 w-[280px] border-r-neutral-light">
+              <SheetContent side="top" className="bg-neutral-medium text-neutral-extralight p-0 h-auto border-b-neutral-light">
                 <div className="p-4">
-                   <Link href="/" className="text-2xl font-bold text-brand-primary font-inter mb-6 block" onClick={() => setIsMobileMenuOpen(false)}>
+                   <Link href="/" className="text-2xl font-bold text-brand-primary font-inter mb-6 block text-center" onClick={() => setIsMobileMenuOpen(false)}>
                       MangaFluent
                     </Link>
-                <nav className="flex flex-col space-y-2">
+                <nav className="flex flex-col space-y-2 items-center">
                   {navItems.map((item) => (
                      <SheetClose asChild key={item.label}>
                         <Link
                         href={item.href}
-                        className="block py-2 px-3 rounded-md text-neutral-extralight hover:bg-neutral-light hover:text-brand-primary transition duration-300 font-inter"
+                        className="block py-2 px-3 rounded-md text-neutral-extralight hover:bg-neutral-light hover:text-brand-primary transition duration-300 font-inter text-lg"
                         >
                         {item.label}
                         </Link>
                     </SheetClose>
                   ))}
-                  <div className="relative mt-4 sm:hidden">
+                  <div className="relative mt-4 w-full max-w-xs sm:hidden">
                     <Input
                       type="text"
                       placeholder="Search manga..."
