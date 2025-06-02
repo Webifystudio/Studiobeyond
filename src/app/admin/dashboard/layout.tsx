@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { LayoutDashboard, Tag, BookOpen, Image as ImageIcon, LogOut, Home } from 'lucide-react';
+import { LayoutDashboard, Tag, BookOpen, Image as ImageIcon, LogOut, Home, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -14,6 +14,7 @@ const navItems = [
   { href: '/admin/dashboard/genres', label: 'Manage Genres', icon: Tag },
   { href: '/admin/dashboard/mangas', label: 'Manage Mangas', icon: BookOpen },
   { href: '/admin/dashboard/slider', label: 'Manage Slider', icon: ImageIcon },
+  { href: '/admin/dashboard/pages', label: 'Manage Pages', icon: FileText },
 ];
 
 export default function AdminDashboardLayout({
@@ -49,7 +50,7 @@ export default function AdminDashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-neutral-dark text-neutral-extralight">
-      <aside className="w-64 bg-neutral-medium border-r border-neutral-light p-4 flex flex-col">
+      <aside className="w-64 bg-neutral-medium border-r border-neutral-light p-4 flex flex-col hidden md:flex"> {/* Hide sidebar on small screens, show on md and up */}
         <div className="mb-8">
           <Link href="/admin/dashboard" className="text-2xl font-bold text-brand-primary font-inter">
             BEYOND SCANS Admin
@@ -96,7 +97,8 @@ export default function AdminDashboardLayout({
           </Button>
         </div>
       </aside>
-      <main className="flex-1 p-6 sm:p-8 lg:p-10 overflow-y-auto">
+      {/* TODO: Add a mobile menu toggle for admin sidebar if desired in future */}
+      <main className="flex-1 p-4 sm:p-6 lg:p-10 overflow-y-auto">
         {children}
       </main>
     </div>

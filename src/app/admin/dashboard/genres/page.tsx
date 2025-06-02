@@ -58,7 +58,7 @@ export default function ManageGenresPage() {
       });
       toast({ title: "Genre Added", description: `Genre "${genreName}" added successfully.` });
       setGenreName('');
-      fetchGenres(); // Refresh list
+      fetchGenres(); 
     } catch (error) {
       console.error("Error adding genre: ", error);
       toast({ title: "Error", description: "Could not add genre.", variant: "destructive" });
@@ -72,7 +72,7 @@ export default function ManageGenresPage() {
     try {
         await deleteDoc(doc(db, "genres", genreId));
         toast({ title: "Genre Deleted", description: `Genre "${name}" deleted successfully.` });
-        fetchGenres(); // Refresh list
+        fetchGenres(); 
     } catch (error) {
         console.error("Error deleting genre: ", error);
         toast({ title: "Error", description: "Could not delete genre.", variant: "destructive" });
@@ -80,12 +80,12 @@ export default function ManageGenresPage() {
   };
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-white font-headline">Manage Genres</h1>
+    <div className="space-y-6 md:space-y-8">
+      <h1 className="text-2xl md:text-3xl font-bold text-white font-headline">Manage Genres</h1>
       
       <Card className="bg-neutral-medium border-neutral-light">
         <CardHeader>
-          <CardTitle className="text-xl text-white font-headline flex items-center">
+          <CardTitle className="text-lg md:text-xl text-white font-headline flex items-center">
             <PlusCircle className="mr-2 h-5 w-5 text-brand-primary" /> Add New Genre
           </CardTitle>
           <CardDescription className="text-neutral-extralight/80">
@@ -105,7 +105,7 @@ export default function ManageGenresPage() {
                 className="bg-neutral-light border-neutral-light text-neutral-extralight focus:ring-brand-primary"
               />
             </div>
-            <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white">
+            <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white w-full sm:w-auto">
               Add Genre
             </Button>
           </CardContent>
@@ -114,7 +114,7 @@ export default function ManageGenresPage() {
 
       <Card className="bg-neutral-medium border-neutral-light">
         <CardHeader>
-          <CardTitle className="text-xl text-white font-headline flex items-center">
+          <CardTitle className="text-lg md:text-xl text-white font-headline flex items-center">
             <List className="mr-2 h-5 w-5 text-brand-primary" /> Existing Genres
           </CardTitle>
           <CardDescription className="text-neutral-extralight/80">
@@ -129,12 +129,12 @@ export default function ManageGenresPage() {
           ) : (
             <ul className="space-y-2">
               {genres.map((genre) => (
-                <li key={genre.id} className="flex justify-between items-center p-3 bg-neutral-light rounded-md shadow">
-                  <span className="text-neutral-extralight">{genre.name}</span>
+                <li key={genre.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-neutral-light rounded-md shadow gap-2 sm:gap-0">
+                  <span className="text-neutral-extralight flex-grow">{genre.name}</span>
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="text-red-400 hover:text-red-300 hover:bg-neutral-medium/50"
+                    className="text-red-400 hover:text-red-300 hover:bg-neutral-medium/50 self-end sm:self-center"
                     onClick={() => handleDeleteGenre(genre.id, genre.name)}
                     aria-label={`Delete ${genre.name}`}
                   >

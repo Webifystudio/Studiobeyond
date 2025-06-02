@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { PlusCircle, List, Trash2, ExternalLink } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { db, serverTimestamp } from '@/lib/firebase';
-import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, Timestamp, DocumentData } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, Timestamp } from 'firebase/firestore';
 import Image from 'next/image';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -128,8 +128,8 @@ export default function ManageMangasPage() {
         updatedAt: serverTimestamp(),
       });
       toast({ title: "Manga Added", description: `Manga "${mangaDetails.title}" added successfully.` });
-      setMangaDetails(initialMangaDetails); // Reset form
-      fetchMangas(); // Refresh list
+      setMangaDetails(initialMangaDetails); 
+      fetchMangas(); 
     } catch (error) {
       console.error("Error adding manga: ", error);
       toast({ title: "Error", description: "Could not add manga.", variant: "destructive" });
@@ -143,7 +143,7 @@ export default function ManageMangasPage() {
     try {
         await deleteDoc(doc(db, "mangas", mangaId));
         toast({ title: "Manga Deleted", description: `Manga "${title}" deleted successfully.` });
-        fetchMangas(); // Refresh list
+        fetchMangas(); 
     } catch (error) {
         console.error("Error deleting manga: ", error);
         toast({ title: "Error", description: "Could not delete manga.", variant: "destructive" });
@@ -152,12 +152,12 @@ export default function ManageMangasPage() {
 
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-white font-headline">Manage Mangas</h1>
+    <div className="space-y-6 md:space-y-8">
+      <h1 className="text-2xl md:text-3xl font-bold text-white font-headline">Manage Mangas</h1>
       
       <Card className="bg-neutral-medium border-neutral-light">
         <CardHeader>
-          <CardTitle className="text-xl text-white font-headline flex items-center">
+          <CardTitle className="text-lg md:text-xl text-white font-headline flex items-center">
             <PlusCircle className="mr-2 h-5 w-5 text-brand-primary" /> Add New Manga
           </CardTitle>
           <CardDescription className="text-neutral-extralight/80">
@@ -186,7 +186,7 @@ export default function ManageMangasPage() {
                     name="status" 
                     value={mangaDetails.status} 
                     onChange={handleChange}
-                    className="w-full h-10 rounded-md border border-input bg-neutral-light px-3 py-2 text-base text-neutral-extralight focus:ring-brand-primary"
+                    className="w-full h-10 rounded-md border border-input bg-neutral-light px-3 py-2 text-sm md:text-base text-neutral-extralight focus:ring-brand-primary"
                 >
                     <option value="Ongoing">Ongoing</option>
                     <option value="Completed">Completed</option>
@@ -204,7 +204,7 @@ export default function ManageMangasPage() {
             <div>
               <Label className="text-neutral-extralight">Genres</Label>
               {isFetchingGenres ? <p className="text-neutral-extralight/70">Loading genres...</p> : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 p-2 border border-neutral-light rounded-md bg-neutral-light max-h-40 overflow-y-auto">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-2 border border-neutral-light rounded-md bg-neutral-light max-h-40 overflow-y-auto">
                   {allGenres.length > 0 ? allGenres.map(genre => (
                     <div key={genre.id} className="flex items-center space-x-2">
                       <Checkbox
@@ -229,7 +229,7 @@ export default function ManageMangasPage() {
               <Label htmlFor="dataAiHint" className="text-neutral-extralight">AI Image Hint (Optional)</Label>
               <Input id="dataAiHint" name="dataAiHint" type="text" value={mangaDetails.dataAiHint} onChange={handleChange} placeholder="e.g., epic battle anime" className="bg-neutral-light text-neutral-extralight" />
             </div>
-            <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white">
+            <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white w-full sm:w-auto">
               Add Manga
             </Button>
           </CardContent>
@@ -238,7 +238,7 @@ export default function ManageMangasPage() {
 
       <Card className="bg-neutral-medium border-neutral-light">
         <CardHeader>
-          <CardTitle className="text-xl text-white font-headline flex items-center">
+          <CardTitle className="text-lg md:text-xl text-white font-headline flex items-center">
             <List className="mr-2 h-5 w-5 text-brand-primary" /> Existing Mangas
           </CardTitle>
            <CardDescription className="text-neutral-extralight/80">
@@ -251,7 +251,7 @@ export default function ManageMangasPage() {
           ) : mangas.length === 0 ? (
             <p className="text-neutral-extralight/70">No mangas added yet.</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {mangas.map((manga) => (
                 <Card key={manga.id} className="bg-neutral-light overflow-hidden shadow-md">
                   <div className="relative w-full h-48">
@@ -264,7 +264,7 @@ export default function ManageMangasPage() {
                     />
                   </div>
                   <CardContent className="p-3">
-                    <h3 className="font-semibold text-white truncate" title={manga.title}>{manga.title}</h3>
+                    <h3 className="font-semibold text-white truncate text-sm md:text-base" title={manga.title}>{manga.title}</h3>
                     <p className="text-xs text-neutral-extralight/80">{manga.status} - {manga.chapters} Chapters</p>
                     <p className="text-xs text-neutral-extralight/70 truncate" title={manga.genres.join(', ')}>Genres: {manga.genres.join(', ')}</p>
                     {manga.externalReadLink && (
@@ -275,7 +275,7 @@ export default function ManageMangasPage() {
                     <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="text-red-400 hover:text-red-300 hover:bg-neutral-medium/50 p-1 mt-2 h-auto w-auto"
+                        className="text-red-400 hover:text-red-300 hover:bg-neutral-medium/50 p-1 mt-2 h-auto w-auto self-end"
                         onClick={() => handleDeleteManga(manga.id, manga.title)}
                         aria-label={`Delete ${manga.title}`}
                     >
@@ -291,4 +291,3 @@ export default function ManageMangasPage() {
     </div>
   );
 }
-
