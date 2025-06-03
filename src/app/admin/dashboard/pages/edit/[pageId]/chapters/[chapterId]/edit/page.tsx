@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, type FormEvent } from 'react';
-import { useRouter, useParams }_ from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
