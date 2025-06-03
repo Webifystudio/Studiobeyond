@@ -1,6 +1,6 @@
 
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getFirestore, type Firestore, serverTimestamp as originalServerTimestamp, collection, doc, setDoc, getDoc, getDocs, updateDoc, increment, query, where, orderBy, arrayUnion, arrayRemove, type Timestamp } from 'firebase/firestore'; // Added getDocs, updateDoc, increment, query, where, orderBy, arrayUnion, arrayRemove, Timestamp
+import { getFirestore, type Firestore, serverTimestamp as originalServerTimestamp, collection, doc, setDoc, getDoc, getDocs, updateDoc, increment, query, where, orderBy, arrayUnion, arrayRemove, type Timestamp, limit } from 'firebase/firestore'; // Added getDocs, updateDoc, increment, query, where, orderBy, arrayUnion, arrayRemove, Timestamp, limit
 import { getAuth, type Auth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as firebaseSignOut, type User } from 'firebase/auth';
 // import { getStorage, type FirebaseStorage } from 'firebase/storage'; // Add if you need Firebase Storage
 
@@ -70,8 +70,9 @@ const signOut = async () => {
 
 export { app, db, auth, serverTimestamp, signInWithGoogle, signOut, onAuthStateChanged, GoogleAuthProvider, type User };
 // Exporting Firestore functions for direct use
-export { collection, doc, setDoc, getDoc, getDocs, updateDoc, increment, query, where, orderBy, arrayUnion, arrayRemove, type Timestamp };
+export { collection, doc, setDoc, getDoc, getDocs, updateDoc, increment, query, where, orderBy, arrayUnion, arrayRemove, type Timestamp, limit };
 
 // Note: For production applications, it's highly recommended to store your 
 // API keys and other sensitive configuration in environment variables 
 // (e.g., using a .env.local file) rather than hardcoding them directly in the source code.
+
