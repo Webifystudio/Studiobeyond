@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { signInWithGoogle, auth } from '@/lib/firebase'; // Assuming auth is exported for onAuthStateChanged
 import { useToast } from "@/hooks/use-toast";
 import { ChromeIcon } from 'lucide-react'; // Or a Google G icon SVG
+import Link from 'next/link'; // Added this import
 
 // Custom Google Icon SVG
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
