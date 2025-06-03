@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { db, serverTimestamp, collection, query, where, getDocs, doc, updateDoc, increment, Timestamp, orderBy } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'; // Added Card imports
 
 interface CustomPageData {
   id: string;
@@ -113,7 +114,7 @@ export default function PublicCustomPage() {
   const handleInteraction = (action: string) => {
     toast({
       title: "Login Required",
-      description: `You need to be logged in to ${action}.`,
+      description: `You need to be logged in to ${action}. This feature is coming soon!`,
       action: <Button variant="outline" size="sm" onClick={() => router.push('/login')}>Login</Button>
     });
   };
@@ -407,3 +408,5 @@ export default function PublicCustomPage() {
   );
 }
 
+
+    
