@@ -8,10 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Save, ArrowLeft, ExternalLink } from 'lucide-react';
+import { Save, ArrowLeft, ExternalLink, PlusCircle, Trash2, Edit3, ImageIcon } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { db, serverTimestamp } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, Timestamp, addDoc, collection, getDocs, deleteDoc, query, orderBy } from 'firebase/firestore';
 import Link from 'next/link';
 
 interface CustomPageData {
@@ -26,6 +26,13 @@ interface CustomPageData {
   views: number;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
+}
+
+interface ChapterData {
+  id: string;
+  name: string;
+  createdAt: Timestamp;
+  imageUrls?: string[];
 }
 
 const initialPageDetails: CustomPageData = {
@@ -46,8 +53,11 @@ export default function EditCustomPage() {
   const pageId = params.pageId as string;
 
   const [pageDetails, setPageDetails] = useState<CustomPageData>(initialPageDetails);
+  const [chapters, setChapters] = useState<ChapterData[]>([]);
+  const [newChapterName, setNewChapterName] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingChapters, setIsLoadingChapters] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -70,8 +80,25 @@ export default function EditCustomPage() {
         setIsLoading(false);
       };
       fetchPageData();
+      fetchChapters();
     }
   }, [pageId, toast, router]);
+
+  const fetchChapters = async () => {
+    if (!pageId) return;
+    setIsLoadingChapters(true);
+    try {
+      const chaptersRef = collection(db, 'customPages', pageId, 'chapters');
+      const q = query(chaptersRef, orderBy('createdAt', 'asc'));
+      const querySnapshot = await getDocs(q);
+      const fetchedChapters = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChapterData));
+      setChapters(fetchedChapters);
+    } catch (error) {
+      console.error("Error fetching chapters:", error);
+      toast({ title: "Error", description: "Could not fetch chapters.", variant: "destructive" });
+    }
+    setIsLoadingChapters(false);
+  };
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -88,12 +115,46 @@ export default function EditCustomPage() {
         updatedAt: serverTimestamp()
       });
       toast({ title: "Page Updated", description: `Page "${pageDetails.title}" updated successfully.` });
-      router.push('/admin/dashboard/pages');
     } catch (error) {
       console.error("Error updating page: ", error);
       toast({ title: "Error", description: "Could not update page.", variant: "destructive" });
     }
     setIsSaving(false);
+  };
+
+  const handleAddChapter = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!newChapterName.trim()) {
+      toast({ title: "Error", description: "Chapter name cannot be empty.", variant: "destructive" });
+      return;
+    }
+    try {
+      const chaptersRef = collection(db, 'customPages', pageId, 'chapters');
+      await addDoc(chaptersRef, {
+        name: newChapterName.trim(),
+        imageUrls: [],
+        createdAt: serverTimestamp(),
+      });
+      toast({ title: "Chapter Added", description: `Chapter "${newChapterName}" added.` });
+      setNewChapterName('');
+      fetchChapters();
+    } catch (error) {
+      console.error("Error adding chapter:", error);
+      toast({ title: "Error", description: "Could not add chapter.", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteChapter = async (chapterId: string, chapterName: string) => {
+    if (!confirm(`Are you sure you want to delete chapter "${chapterName}"? This will also delete all its images.`)) return;
+    try {
+      const chapterRef = doc(db, 'customPages', pageId, 'chapters', chapterId);
+      await deleteDoc(chapterRef);
+      toast({ title: "Chapter Deleted", description: `Chapter "${chapterName}" deleted.` });
+      fetchChapters();
+    } catch (error) {
+      console.error("Error deleting chapter:", error);
+      toast({ title: "Error", description: "Could not delete chapter.", variant: "destructive" });
+    }
   };
   
   if (isLoading) {
@@ -160,10 +221,73 @@ export default function EditCustomPage() {
             </div>
             
             <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white w-full sm:w-auto" disabled={isSaving}>
-              <Save className="mr-2 h-4 w-4" /> {isSaving ? 'Saving...' : 'Save Changes'}
+              <Save className="mr-2 h-4 w-4" /> {isSaving ? 'Saving Page Settings...' : 'Save Page Settings'}
             </Button>
           </CardContent>
         </form>
+      </Card>
+
+      {/* Chapters Management Section */}
+      <Card className="bg-neutral-medium border-neutral-light">
+        <CardHeader>
+          <CardTitle className="text-lg md:text-xl text-white font-headline flex items-center">
+            <PlusCircle className="mr-2 h-5 w-5 text-brand-primary" /> Manage Chapters
+          </CardTitle>
+          <CardDescription className="text-neutral-extralight/80">
+            Add or edit chapters for this page.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <form onSubmit={handleAddChapter} className="space-y-4">
+            <div>
+              <Label htmlFor="newChapterName" className="text-neutral-extralight">New Chapter Name</Label>
+              <Input
+                id="newChapterName"
+                type="text"
+                value={newChapterName}
+                onChange={(e) => setNewChapterName(e.target.value)}
+                placeholder="e.g., Chapter 1: The Beginning"
+                className="bg-neutral-light border-neutral-light text-neutral-extralight focus:ring-brand-primary"
+              />
+            </div>
+            <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white w-full sm:w-auto">
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Chapter
+            </Button>
+          </form>
+
+          <div>
+            <h3 className="text-md font-semibold text-white mb-2 font-headline">Existing Chapters</h3>
+            {isLoadingChapters ? (
+              <p className="text-neutral-extralight/70">Loading chapters...</p>
+            ) : chapters.length === 0 ? (
+              <p className="text-neutral-extralight/70">No chapters added yet for this page.</p>
+            ) : (
+              <ul className="space-y-2">
+                {chapters.map((chapter) => (
+                  <li key={chapter.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-neutral-light rounded-md shadow gap-2">
+                    <span className="text-neutral-extralight flex-grow">{chapter.name}</span>
+                    <div className="flex items-center gap-2 self-end sm:self-center">
+                      <Button variant="outline" size="sm" asChild className="text-xs">
+                        <Link href={`/admin/dashboard/pages/edit/${pageId}/chapters/${chapter.id}/edit`}>
+                          <ImageIcon className="mr-1 h-3 w-3" /> Manage Images
+                        </Link>
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-red-400 hover:text-red-300 hover:bg-neutral-medium/50"
+                        onClick={() => handleDeleteChapter(chapter.id, chapter.name)}
+                        aria-label={`Delete ${chapter.name}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </CardContent>
       </Card>
     </div>
   );

@@ -3,12 +3,22 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Search, UserCircle2, Menu as MenuIcon, X } from 'lucide-react';
+import { Search, Menu as MenuIcon, X, LogIn, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { auth, signOut, onAuthStateChanged, type User } from '@/lib/firebase';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const navItems = [
   { href: '/', label: 'Home' },
@@ -20,11 +30,35 @@ const navItems = [
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
-    setIsMobileMenuOpen(false); // Close mobile menu on route change
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      setIsLoadingAuth(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false); 
   }, [pathname]);
+
+  const handleLogout = async () => {
+    await signOut();
+    setCurrentUser(null);
+    router.push('/'); // Redirect to home or login page after logout
+  };
+  
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return "?";
+    const names = name.split(' ');
+    if (names.length === 1) return names[0][0]?.toUpperCase() || "?";
+    return (names[0][0] + (names[names.length - 1][0] || '')).toUpperCase();
+  };
 
   return (
     <header className="bg-neutral-medium shadow-lg sticky top-0 z-50">
@@ -58,11 +92,50 @@ export function Header() {
               />
               <Search className="w-5 h-5 text-neutral-extralight absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none" />
             </div>
-            <Button variant="ghost" size="icon" aria-label="User Profile" className="rounded-full hover:bg-neutral-light text-neutral-extralight hover:text-brand-primary p-0">
-              <UserCircle2 className="w-7 h-7" />
-            </Button>
             
-            {/* Mobile Menu */}
+            {isLoadingAuth ? (
+              <div className="h-10 w-10 rounded-full bg-neutral-light animate-pulse" />
+            ) : currentUser ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage src={currentUser.photoURL || undefined} alt={currentUser.displayName || "User"} />
+                      <AvatarFallback className="bg-brand-primary text-white">
+                        {getInitials(currentUser.displayName)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 bg-neutral-medium border-neutral-light text-neutral-extralight" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none text-white">
+                        {currentUser.displayName || "User"}
+                      </p>
+                      <p className="text-xs leading-none text-neutral-extralight/70">
+                        {currentUser.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-neutral-light" />
+                  <DropdownMenuItem onClick={() => router.push('/profile/settings')} className="cursor-pointer hover:!bg-neutral-light focus:!bg-neutral-light">
+                    Profile Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer hover:!bg-neutral-light focus:!bg-neutral-light text-red-400 hover:!text-red-300 focus:!text-red-300">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button variant="ghost" size="sm" asChild className="text-neutral-extralight hover:text-brand-primary hover:bg-neutral-light">
+                <Link href="/login">
+                  <LogIn className="mr-2 h-4 w-4" /> Login
+                </Link>
+              </Button>
+            )}
+            
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild className="md:hidden">
                 <Button variant="ghost" size="icon" aria-label="Open menu" className="rounded-full hover:bg-neutral-light text-neutral-extralight hover:text-brand-primary p-0">
@@ -72,9 +145,7 @@ export function Header() {
               <SheetContent 
                 side="top" 
                 className="bg-neutral-medium text-neutral-extralight p-0 h-auto border-b-neutral-light"
-                // Remove default close button from SheetContent as we handle it with SheetClose and X icon
                 onInteractOutside={(e) => {
-                    // Prevent closing on click outside if menu icon was clicked
                     if ((e.target as HTMLElement)?.closest('[aria-label="Open menu"]')) {
                         e.preventDefault();
                     }
