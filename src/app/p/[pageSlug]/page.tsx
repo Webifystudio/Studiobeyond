@@ -1,17 +1,21 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState, type ChangeEvent } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Home, Search, Share2, ThumbsUp, MessageCircle, Eye, ArrowLeft, X as CloseIcon, DownloadCloud } from 'lucide-react';
+import { Home, Search, Share2, ThumbsUp, MessageCircle, Eye, ArrowLeft, X as CloseIcon, DownloadCloud, LayoutGrid, LayoutList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { db, serverTimestamp, collection, query, where, getDocs, doc, updateDoc, increment, Timestamp, orderBy, auth, onAuthStateChanged, type User } from '@/lib/firebase';
+import { db, collection, query, where, getDocs, doc, updateDoc, increment, Timestamp, orderBy, auth, onAuthStateChanged, type User } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface CustomPageData {
   id: string;
@@ -51,6 +55,11 @@ export default function PublicCustomPage() {
   const [selectedChapter, setSelectedChapter] = useState<ChapterItem | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [readingMode, setReadingMode] = useState<'horizontal' | 'vertical'>('horizontal');
+
+  const [showChapterSearch, setShowChapterSearch] = useState(false);
+  const [chapterSearchTerm, setChapterSearchTerm] = useState('');
+
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -124,12 +133,12 @@ export default function PublicCustomPage() {
       toast({
         title: "Login Required",
         description: `You need to be logged in to ${action}.`,
-        action: <Button variant="outline" size="sm" onClick={() => router.push('/login')}>Login</Button>
+        action: <Button variant="outline" size="sm" onClick={() => router.push('/login')}>Login</Button>,
+        duration: 5000,
       });
       router.push('/login');
       return;
     }
-    // Placeholder for actual like/comment logic
     toast({
       title: "Coming Soon!",
       description: `The ability to ${action} is under development.`,
@@ -162,6 +171,7 @@ export default function PublicCustomPage() {
   const openChapterViewer = (chapter: ChapterItem) => {
     setSelectedChapter(chapter);
     setCurrentImageIndex(0);
+    setReadingMode('horizontal'); // Reset to horizontal when opening new chapter
   };
 
   const closeChapterViewer = () => {
@@ -169,7 +179,7 @@ export default function PublicCustomPage() {
   };
 
   const navigateImage = (direction: 'next' | 'prev') => {
-    if (!selectedChapter) return;
+    if (!selectedChapter || readingMode === 'vertical') return;
     setCurrentImageIndex(prev => {
       if (direction === 'next') {
         return prev < selectedChapter.imageUrls.length - 1 ? prev + 1 : prev;
@@ -188,6 +198,10 @@ export default function PublicCustomPage() {
       openChapterViewer(chapters[currentChapterIndexInList - 1]);
     }
   };
+
+  const filteredChapters = chapters.filter(chapter =>
+    chapter.name.toLowerCase().includes(chapterSearchTerm.toLowerCase())
+  );
 
   if (isLoading) {
     return (
@@ -240,22 +254,41 @@ export default function PublicCustomPage() {
 
     return (
       <div className="flex flex-col min-h-screen bg-black text-white">
-        <nav className="fixed top-0 left-0 right-0 z-50 p-2 sm:p-4 flex justify-between items-center bg-black/70 backdrop-blur-sm">
+        <nav className="fixed top-0 left-0 right-0 z-50 p-2 sm:p-3 flex justify-between items-center bg-black/80 backdrop-blur-sm">
           <Button variant="ghost" size="icon" onClick={closeChapterViewer} className="hover:bg-white/10">
-            <ArrowLeft className="h-6 w-6" />
+            <ArrowLeft className="h-5 w-5 sm:h-6 sm:w-6" />
             <span className="sr-only">Back to Page Details</span>
           </Button>
-          <div className="text-center">
-            <h2 className="text-sm sm:text-lg font-semibold truncate max-w-[150px] sm:max-w-xs md:max-w-md">{selectedChapter.name}</h2>
-            {totalImages > 0 && <p className="text-xs sm:text-sm text-neutral-400">Page {currentImageIndex + 1} of {totalImages}</p>}
+          <div className="text-center mx-2 flex-1 min-w-0">
+            <h2 className="text-xs sm:text-base font-semibold truncate " title={selectedChapter.name}>{selectedChapter.name}</h2>
+            {readingMode === 'horizontal' && totalImages > 0 && <p className="text-xs text-neutral-400">Page {currentImageIndex + 1} of {totalImages}</p>}
+            {readingMode === 'vertical' && totalImages > 0 && <p className="text-xs text-neutral-400">{totalImages} Pages (Scroll)</p>}
           </div>
           <div className="flex items-center gap-1 sm:gap-2">
+            <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setReadingMode(readingMode === 'horizontal' ? 'vertical' : 'horizontal')}
+                            className="hover:bg-white/10"
+                            aria-label={readingMode === 'horizontal' ? "Switch to Vertical Reading" : "Switch to Horizontal Reading"}
+                        >
+                            {readingMode === 'horizontal' ? <LayoutList className="h-5 w-5 sm:h-6 sm:w-6" /> : <LayoutGrid className="h-5 w-5 sm:h-6 sm:w-6" />}
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="bg-neutral-medium text-neutral-extralight border-neutral-light">
+                        <p>{readingMode === 'horizontal' ? "Vertical View" : "Horizontal View"}</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={() => navigateChapter('prev')} 
               disabled={currentChapterIndexInList <= 0}
-              className="hover:bg-white/10 text-xs sm:text-sm px-2 sm:px-3"
+              className="hover:bg-white/10 text-xs sm:text-sm px-1 sm:px-2"
             >
               Prev Ch
             </Button>
@@ -264,46 +297,71 @@ export default function PublicCustomPage() {
               size="sm" 
               onClick={() => navigateChapter('next')} 
               disabled={currentChapterIndexInList >= chapters.length - 1}
-              className="hover:bg-white/10 text-xs sm:text-sm px-2 sm:px-3"
+              className="hover:bg-white/10 text-xs sm:text-sm px-1 sm:px-2"
             >
               Next Ch
             </Button>
           </div>
         </nav>
-        <main className="flex-grow flex items-center justify-center pt-16 pb-16 sm:pt-20 sm:pb-20 overflow-hidden">
-          {totalImages > 0 && currentImageUrl ? (
-            <Image
-              key={currentImageUrl}
-              src={currentImageUrl}
-              alt={`Page ${currentImageIndex + 1} of ${selectedChapter.name}`}
-              width={800} 
-              height={1200} 
-              className="max-w-full max-h-full object-contain"
-              data-ai-hint="manga page"
-              onError={(e) => (e.currentTarget.src = 'https://placehold.co/800x1200/000000/FFFFFF?text=Error+Loading+Image')}
-            />
-          ) : (
-            <p className="text-neutral-400">{totalImages === 0 ? "No images in this chapter." : "Error loading image."}</p>
+
+        <main className={`flex-grow pt-16 pb-16 sm:pt-20 sm:pb-20 overflow-hidden ${readingMode === 'vertical' ? 'overflow-y-auto' : ''}`}>
+          {readingMode === 'horizontal' && totalImages > 0 && currentImageUrl && (
+             <div className="flex items-center justify-center h-full">
+                <Image
+                key={currentImageUrl} // Re-mount image on URL change
+                src={currentImageUrl}
+                alt={`Page ${currentImageIndex + 1} of ${selectedChapter.name}`}
+                width={800} 
+                height={1200} 
+                className="max-w-full max-h-full object-contain"
+                data-ai-hint="manga page"
+                priority={currentImageIndex < 2} // Prioritize first few images
+                onError={(e) => (e.currentTarget.src = 'https://placehold.co/800x1200/000000/FFFFFF?text=Error+Loading+Image')}
+                />
+            </div>
+          )}
+          {readingMode === 'vertical' && totalImages > 0 && (
+            <div className="flex flex-col items-center space-y-1 w-full px-1 sm:px-2">
+              {selectedChapter.imageUrls.map((url, index) => (
+                <Image
+                  key={url + index}
+                  src={url}
+                  alt={`Page ${index + 1} of ${selectedChapter.name}`}
+                  width={720} 
+                  height={1080} 
+                  className="object-contain w-full h-auto max-w-screen-md shadow-md"
+                  data-ai-hint="manga page scroll"
+                  loading={index > 2 ? "lazy" : "eager"} // Lazy load images after the first few
+                  onError={(e) => (e.currentTarget.src = 'https://placehold.co/720x1080/000000/FFFFFF?text=Error+Loading+Image')}
+                />
+              ))}
+            </div>
+          )}
+          {totalImages === 0 && (
+            <div className="flex items-center justify-center h-full">
+                <p className="text-neutral-400">No images in this chapter.</p>
+            </div>
           )}
         </main>
-        <footer className="fixed bottom-0 left-0 right-0 z-50 p-2 sm:p-4 flex justify-between items-center bg-black/70 backdrop-blur-sm">
+        
+        <footer className="fixed bottom-0 left-0 right-0 z-50 p-2 sm:p-3 flex justify-between items-center bg-black/80 backdrop-blur-sm">
           <Button 
             variant="ghost" 
             onClick={() => navigateImage('prev')} 
-            disabled={currentImageIndex <= 0 || totalImages === 0}
-            className="hover:bg-white/10 text-sm sm:text-base"
+            disabled={currentImageIndex <= 0 || totalImages === 0 || readingMode === 'vertical'}
+            className={`hover:bg-white/10 text-sm sm:text-base ${readingMode === 'vertical' ? 'invisible' : ''}`}
           >
             Previous
           </Button>
           <Button variant="ghost" size="icon" onClick={closeChapterViewer} className="hover:bg-white/10">
-            <CloseIcon className="h-6 w-6" />
+            <CloseIcon className="h-5 w-5 sm:h-6 sm:w-6" />
             <span className="sr-only">Close Viewer</span>
           </Button>
           <Button 
             variant="ghost" 
             onClick={() => navigateImage('next')} 
-            disabled={currentImageIndex >= totalImages - 1 || totalImages === 0}
-            className="hover:bg-white/10 text-sm sm:text-base"
+            disabled={currentImageIndex >= totalImages - 1 || totalImages === 0 || readingMode === 'vertical'}
+            className={`hover:bg-white/10 text-sm sm:text-base ${readingMode === 'vertical' ? 'invisible' : ''}`}
           >
             Next
           </Button>
@@ -313,20 +371,43 @@ export default function PublicCustomPage() {
   }
 
   return (
+    <TooltipProvider>
     <div className="flex flex-col min-h-screen bg-neutral-dark text-white">
-      <nav className="fixed top-0 left-0 right-0 z-50 p-4 flex justify-between items-center bg-transparent transition-all duration-300 hover:bg-black/30">
+      <nav className="fixed top-0 left-0 right-0 z-50 p-3 sm:p-4 flex justify-between items-center bg-transparent transition-all duration-300 hover:bg-black/30">
         <Link href="/" aria-label="Go to Homepage">
-          <Home className="h-7 w-7 text-white hover:text-brand-primary transition-colors" />
+          <Home className="h-6 w-6 sm:h-7 sm:w-7 text-white hover:text-brand-primary transition-colors" />
         </Link>
-        <div className="flex items-center space-x-3">
-          <Button variant="ghost" size="icon" className="text-white hover:text-brand-primary hover:bg-white/10" onClick={() => toast({title: "Search Coming Soon!", description: "This feature is under development."})}>
-            <Search className="h-6 w-6" />
-            <span className="sr-only">Search</span>
-          </Button>
-          <Button variant="ghost" size="icon" className="text-white hover:text-brand-primary hover:bg-white/10" onClick={handleShare}>
-            <Share2 className="h-6 w-6" />
-            <span className="sr-only">Share</span>
-          </Button>
+        <div className="flex items-center space-x-1 sm:space-x-2">
+          {showChapterSearch && (
+            <Input
+                type="text"
+                placeholder="Search chapters..."
+                value={chapterSearchTerm}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setChapterSearchTerm(e.target.value)}
+                className="h-8 sm:h-9 bg-neutral-dark/70 border-neutral-light text-neutral-extralight placeholder:text-neutral-extralight/60 focus:ring-brand-primary w-32 sm:w-48 transition-all duration-300"
+                aria-label="Search Chapters"
+            />
+          )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-white hover:text-brand-primary hover:bg-white/10" onClick={() => setShowChapterSearch(!showChapterSearch)}>
+                <Search className="h-5 w-5 sm:h-6 sm:w-6" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="bg-neutral-medium text-neutral-extralight border-neutral-light">
+                <p>Search Chapters</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-white hover:text-brand-primary hover:bg-white/10" onClick={handleShare}>
+                <Share2 className="h-5 w-5 sm:h-6 sm:w-6" />
+              </Button>
+            </TooltipTrigger>
+             <TooltipContent side="bottom" className="bg-neutral-medium text-neutral-extralight border-neutral-light">
+                <p>Share Page</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </nav>
 
@@ -363,25 +444,37 @@ export default function PublicCustomPage() {
               {!pageData.description && !pageData.author && !pageData.category && (
                    <p className="text-neutral-extralight/70 font-body mb-8">No additional content available for this page yet.</p>
               )}
-              <div className="flex items-center space-x-4 md:space-x-6">
-                <Button variant="ghost" className="text-white hover:text-brand-primary p-1 group" onClick={() => handleInteraction('like this page')}>
-                  <ThumbsUp className="h-5 w-5 mr-1.5 group-hover:scale-110 transition-transform" />
-                  <span className="text-sm">Like</span> 
-                </Button>
-                <Button variant="ghost" className="text-white hover:text-brand-primary p-1 group" onClick={() => handleInteraction('comment on this page')}>
-                  <MessageCircle className="h-5 w-5 mr-1.5 group-hover:scale-110 transition-transform" />
-                  <span className="text-sm">Comment</span>
-                </Button>
-                 <Dialog open={isDownloadModalOpen} onOpenChange={setIsDownloadModalOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="ghost" className="text-white hover:text-brand-primary p-1 group">
-                      <DownloadCloud className="h-5 w-5 mr-1.5 group-hover:scale-110 transition-transform" />
-                      <span className="text-sm">Download</span>
+              <div className="flex items-center space-x-2 md:space-x-3">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" className="text-white hover:text-brand-primary p-1.5 sm:p-2 group" onClick={() => handleInteraction('like this page')} aria-label="Like this page">
+                      <ThumbsUp className="h-4 w-4 sm:h-5 sm:w-5 group-hover:scale-110 transition-transform" />
                     </Button>
-                  </DialogTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="bg-neutral-medium text-neutral-extralight border-neutral-light"><p>Like</p></TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" className="text-white hover:text-brand-primary p-1.5 sm:p-2 group" onClick={() => handleInteraction('comment on this page')} aria-label="Comment on this page">
+                      <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 group-hover:scale-110 transition-transform" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="bg-neutral-medium text-neutral-extralight border-neutral-light"><p>Comment</p></TooltipContent>
+                </Tooltip>
+                 <Dialog open={isDownloadModalOpen} onOpenChange={setIsDownloadModalOpen}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                        <DialogTrigger asChild>
+                            <Button variant="ghost" className="text-white hover:text-brand-primary p-1.5 sm:p-2 group" aria-label="Download chapters">
+                            <DownloadCloud className="h-4 w-4 sm:h-5 sm:w-5 group-hover:scale-110 transition-transform" />
+                            </Button>
+                        </DialogTrigger>
+                    </TooltipTrigger>
+                     <TooltipContent side="bottom" className="bg-neutral-medium text-neutral-extralight border-neutral-light"><p>Download</p></TooltipContent>
+                  </Tooltip>
                   <DialogContent className="bg-neutral-medium border-neutral-light text-neutral-extralight sm:max-w-[425px]">
                     <DialogHeader>
-                      <DialogTitle className="text-brand-primary">Download Chapters</DialogTitle>
+                      <DialogTitle>Download Chapters</DialogTitle>
                       <DialogDescription>
                         Select a chapter to download if a link is available.
                       </DialogDescription>
@@ -411,29 +504,36 @@ export default function PublicCustomPage() {
                     </DialogClose>
                   </DialogContent>
                 </Dialog>
-                <div className="flex items-center text-neutral-extralight/80 p-1">
-                  <Eye className="h-5 w-5 mr-1.5" />
-                  <span className="text-sm">{pageData.views ?? 0} Views</span>
-                </div>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <div className="flex items-center text-neutral-extralight/80 p-1.5 sm:p-2 cursor-default" aria-label={`${pageData.views ?? 0} views`}>
+                            <Eye className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-1.5" />
+                            <span className="text-xs sm:text-sm">{pageData.views ?? 0}</span>
+                        </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="bg-neutral-medium text-neutral-extralight border-neutral-light"><p>Views</p></TooltipContent>
+                </Tooltip>
               </div>
             </article>
           </div>
         </section>
         
-        {chapters.length > 0 && (
+        {(filteredChapters.length > 0 || chapterSearchTerm) && (
           <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-neutral-dark">
             <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-white font-headline section-title border-l-4 border-brand-primary pl-3">Chapters</h2>
             {isLoadingChapters ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full bg-neutral-medium rounded-lg" />)}
               </div>
-            ) : (
+            ) : filteredChapters.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {chapters.map(chapter => (
+                {filteredChapters.map(chapter => (
                   <Card 
                     key={chapter.id} 
                     className="bg-neutral-medium border-neutral-light hover:shadow-xl transition-shadow cursor-pointer hover:border-brand-primary/50"
                     onClick={() => openChapterViewer(chapter)}
+                    tabIndex={0}
+                    onKeyDown={(e) => e.key === 'Enter' && openChapterViewer(chapter)}
                   >
                     <CardHeader>
                       <CardTitle className="text-lg text-brand-primary font-semibold truncate" title={chapter.name}>{chapter.name}</CardTitle>
@@ -442,12 +542,17 @@ export default function PublicCustomPage() {
                   </Card>
                 ))}
               </div>
+            ) : (
+                 <p className="text-neutral-extralight/70">No chapters found matching your search "{chapterSearchTerm}".</p>
             )}
           </section>
         )}
       </main>
     </div>
+    </TooltipProvider>
   );
 }
+
+    
 
     
