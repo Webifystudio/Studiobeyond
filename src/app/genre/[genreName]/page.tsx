@@ -75,7 +75,7 @@ export default async function GenreSpecificPage({ params }: GenrePageProps) {
   const genreSlug = decodeURIComponent(params.genreName);
   const { mangaList, canonicalGenreName } = await getMangaByGenre(genreSlug);
   
-  const pageTitle = canonicalGenreName || (genreSlug.charAt(0).toUpperCase() + genreSlug.slice(1));
+  const pageTitle = canonicalGenreName || (genreSlug.charAt(0).toUpperCase() + genreSlug.slice(1).replace(/-/g, ' '));
 
   return (
     <div className="flex flex-col min-h-screen bg-neutral-dark">
@@ -108,9 +108,9 @@ export async function generateStaticParams() {
     const genresSnapshot = await getDocs(query(collection(db, 'genres'), orderBy('name', 'asc')));
     const genres = genresSnapshot.docs.map(doc => doc.data() as GenreDoc);
     return genres
-      .filter(genre => genre.slug) // Only generate params for genres that have a slug
+      .filter(genre => genre.slug) 
       .map((genre) => ({
-        genreName: genre.slug, // Use the slug field
+        genreName: genre.slug, 
     }));
   } catch (error) {
     console.error("Error generating static params for genres:", error);
@@ -118,4 +118,4 @@ export async function generateStaticParams() {
   }
 }
 
-export const revalidate = 60; // Revalidate page every 60 seconds
+export const revalidate = 0; // Changed from 60 to 0
