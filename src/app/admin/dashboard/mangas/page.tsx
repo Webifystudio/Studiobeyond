@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, List, Trash2, ExternalLink } from 'lucide-react';
+import { PlusCircle, List, Trash2, ExternalLink, UploadCloud } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { db, serverTimestamp } from '@/lib/firebase';
 import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, Timestamp } from 'firebase/firestore';
@@ -44,12 +44,16 @@ const initialMangaDetails = {
   externalReadLink: '',
 };
 
+const IMGBB_API_KEY = "2bb2346a6a907388d8a3b0beac2bca86";
+
 export default function ManageMangasPage() {
   const [mangaDetails, setMangaDetails] = useState(initialMangaDetails);
   const [mangas, setMangas] = useState<Manga[]>([]);
   const [allGenres, setAllGenres] = useState<Genre[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFetchingGenres, setIsFetchingGenres] = useState(true);
+  const [selectedCoverFile, setSelectedCoverFile] = useState<File | null>(null);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
   const { toast } = useToast();
 
   const fetchMangas = async () => {
@@ -98,6 +102,45 @@ export default function ManageMangasPage() {
     setMangaDetails(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleCoverFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedCoverFile(e.target.files[0]);
+    } else {
+      setSelectedCoverFile(null);
+    }
+  };
+
+  const handleCoverUpload = async () => {
+    if (!selectedCoverFile) {
+      toast({ title: "No File Selected", description: "Please select an image file to upload.", variant: "destructive" });
+      return;
+    }
+    setIsUploadingCover(true);
+    const formData = new FormData();
+    formData.append('image', selectedCoverFile);
+    formData.append('key', IMGBB_API_KEY);
+
+    try {
+      const response = await fetch('https://api.imgbb.com/1/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const result = await response.json();
+      if (result.success) {
+        setMangaDetails(prev => ({ ...prev, imageUrl: result.data.display_url }));
+        toast({ title: "Cover Image Uploaded", description: "Image successfully uploaded to ImgBB." });
+        setSelectedCoverFile(null); // Clear file input
+      } else {
+        throw new Error(result.error?.message || 'ImgBB upload failed');
+      }
+    } catch (error: any) {
+      console.error("Error uploading image to ImgBB: ", error);
+      toast({ title: "Upload Error", description: error.message || "Could not upload cover image.", variant: "destructive" });
+    }
+    setIsUploadingCover(false);
+  };
+
+
   const handleGenreChange = (genreName: string) => {
     setMangaDetails(prev => {
       const newSelectedGenres = prev.selectedGenres.includes(genreName)
@@ -110,7 +153,7 @@ export default function ManageMangasPage() {
   const handleAddManga = async (e: FormEvent) => {
     e.preventDefault();
     if (!mangaDetails.title.trim() || !mangaDetails.imageUrl.trim()) {
-       toast({ title: "Error", description: "Title and Image URL are required.", variant: "destructive" });
+       toast({ title: "Error", description: "Title and Cover Image URL are required.", variant: "destructive" });
       return;
     }
     
@@ -130,9 +173,9 @@ export default function ManageMangasPage() {
       toast({ title: "Manga Added", description: `Manga "${mangaDetails.title}" added successfully.` });
       setMangaDetails(initialMangaDetails); 
       fetchMangas(); 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding manga: ", error);
-      toast({ title: "Error", description: "Could not add manga.", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Could not add manga.", variant: "destructive" });
     }
   };
   
@@ -144,9 +187,9 @@ export default function ManageMangasPage() {
         await deleteDoc(doc(db, "mangas", mangaId));
         toast({ title: "Manga Deleted", description: `Manga "${title}" deleted successfully.` });
         fetchMangas(); 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error deleting manga: ", error);
-        toast({ title: "Error", description: "Could not delete manga.", variant: "destructive" });
+        toast({ title: "Error", description: error.message || "Could not delete manga.", variant: "destructive" });
     }
   };
 
@@ -195,12 +238,35 @@ export default function ManageMangasPage() {
               </div>
             </div>
             <div>
-              <Label htmlFor="imageUrl" className="text-neutral-extralight">Image URL (Cover)</Label>
-              <Input id="imageUrl" name="imageUrl" type="url" value={mangaDetails.imageUrl} onChange={handleChange} placeholder="https://placehold.co/300x450.png" required className="bg-neutral-light text-neutral-extralight" />
-              <p className="text-xs text-neutral-extralight/70 mt-1">
-                Upload your image to a service like <a href="https://imgbb.com/" target="_blank" rel="noopener noreferrer" className="text-brand-primary hover:underline">ImgBB</a> and paste the direct image URL here.
-              </p>
+              <Label htmlFor="coverImage" className="text-neutral-extralight">Cover Image</Label>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1">
+                <Input 
+                    id="coverImage" 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleCoverFileChange} 
+                    className="bg-neutral-light text-neutral-extralight flex-grow file:text-sm file:font-medium file:text-brand-primary file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:bg-brand-primary/20 hover:file:bg-brand-primary/30"
+                />
+                <Button type="button" onClick={handleCoverUpload} disabled={!selectedCoverFile || isUploadingCover} className="bg-accent hover:bg-accent/80 text-accent-foreground shrink-0 w-full sm:w-auto">
+                  <UploadCloud className="mr-2 h-4 w-4" /> {isUploadingCover ? 'Uploading...' : 'Upload Cover'}
+                </Button>
+              </div>
+              {mangaDetails.imageUrl && (
+                <div className="mt-3">
+                  <Label className="text-neutral-extralight text-xs">Current Cover Image URL:</Label>
+                  <Input type="text" value={mangaDetails.imageUrl} readOnly className="bg-neutral-dark border-neutral-light text-neutral-extralight/70 text-xs h-8 mt-1" />
+                  <div className="mt-2 relative w-32 h-48 rounded border border-neutral-light overflow-hidden">
+                    <Image src={mangaDetails.imageUrl} alt="Cover preview" layout="fill" objectFit="cover" />
+                  </div>
+                </div>
+              )}
+              {!mangaDetails.imageUrl && !selectedCoverFile && (
+                 <p className="text-xs text-neutral-extralight/70 mt-1">
+                    Select an image file and click "Upload Cover". The image will be uploaded to ImgBB.
+                 </p>
+              )}
             </div>
+
             <div>
               <Label className="text-neutral-extralight">Genres</Label>
               {isFetchingGenres ? <p className="text-neutral-extralight/70">Loading genres...</p> : (
@@ -291,3 +357,5 @@ export default function ManageMangasPage() {
     </div>
   );
 }
+
+    

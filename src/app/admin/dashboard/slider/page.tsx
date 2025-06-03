@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, List, Trash2 } from 'lucide-react';
+import { PlusCircle, List, Trash2, UploadCloud } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { db, serverTimestamp } from '@/lib/firebase';
 import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, Timestamp } from 'firebase/firestore';
@@ -33,10 +33,14 @@ const initialItemDetails: Omit<SliderItem, 'id' | 'createdAt'> = {
   dataAiHint: '',
 };
 
+const IMGBB_API_KEY = "2bb2346a6a907388d8a3b0beac2bca86";
+
 export default function ManageSliderPage() {
   const [itemDetails, setItemDetails] = useState<Omit<SliderItem, 'id' | 'createdAt'>>(initialItemDetails);
   const [sliderItems, setSliderItems] = useState<SliderItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const { toast } = useToast();
 
   const fetchSliderItems = async () => {
@@ -66,6 +70,44 @@ export default function ManageSliderPage() {
     setItemDetails(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleImageFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedImageFile(e.target.files[0]);
+    } else {
+      setSelectedImageFile(null);
+    }
+  };
+
+  const handleImageUpload = async () => {
+    if (!selectedImageFile) {
+      toast({ title: "No File Selected", description: "Please select an image file to upload.", variant: "destructive" });
+      return;
+    }
+    setIsUploadingImage(true);
+    const formData = new FormData();
+    formData.append('image', selectedImageFile);
+    formData.append('key', IMGBB_API_KEY);
+
+    try {
+      const response = await fetch('https://api.imgbb.com/1/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const result = await response.json();
+      if (result.success) {
+        setItemDetails(prev => ({ ...prev, imageUrl: result.data.display_url }));
+        toast({ title: "Image Uploaded", description: "Image successfully uploaded to ImgBB." });
+        setSelectedImageFile(null);
+      } else {
+        throw new Error(result.error?.message || 'ImgBB upload failed');
+      }
+    } catch (error: any) {
+      console.error("Error uploading image to ImgBB: ", error);
+      toast({ title: "Upload Error", description: error.message || "Could not upload image.", variant: "destructive" });
+    }
+    setIsUploadingImage(false);
+  };
+
   const handleAddItem = async (e: FormEvent) => {
     e.preventDefault();
     if (!itemDetails.title.trim() || !itemDetails.imageUrl.trim()) {
@@ -81,9 +123,9 @@ export default function ManageSliderPage() {
       toast({ title: "Slider Item Added", description: `Item "${itemDetails.title}" added successfully.` });
       setItemDetails(initialItemDetails); 
       fetchSliderItems(); 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding slider item: ", error);
-      toast({ title: "Error", description: "Could not add slider item.", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Could not add slider item.", variant: "destructive" });
     }
   };
 
@@ -95,9 +137,9 @@ export default function ManageSliderPage() {
         await deleteDoc(doc(db, "sliderItems", itemId));
         toast({ title: "Slider Item Deleted", description: `Item "${title}" deleted successfully.` });
         fetchSliderItems(); 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error deleting slider item: ", error);
-        toast({ title: "Error", description: "Could not delete slider item.", variant: "destructive" });
+        toast({ title: "Error", description: error.message || "Could not delete slider item.", variant: "destructive" });
     }
   };
 
@@ -125,11 +167,33 @@ export default function ManageSliderPage() {
               <Textarea id="description" name="description" value={itemDetails.description} onChange={handleChange} placeholder="Short description for the slider item" className="bg-neutral-light text-neutral-extralight" />
             </div>
             <div>
-              <Label htmlFor="imageUrl" className="text-neutral-extralight">Image URL (Large Landscape)</Label>
-              <Input id="imageUrl" name="imageUrl" type="url" value={itemDetails.imageUrl} onChange={handleChange} placeholder="https://placehold.co/1200x500.png" required className="bg-neutral-light text-neutral-extralight" />
-              <p className="text-xs text-neutral-extralight/70 mt-1">
-                Upload your image to a service like <a href="https://imgbb.com/" target="_blank" rel="noopener noreferrer" className="text-brand-primary hover:underline">ImgBB</a> and paste the direct image URL here.
-              </p>
+              <Label htmlFor="sliderImageFile" className="text-neutral-extralight">Slider Image (Large Landscape)</Label>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1">
+                <Input 
+                  id="sliderImageFile" 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleImageFileChange} 
+                  className="bg-neutral-light text-neutral-extralight flex-grow file:text-sm file:font-medium file:text-brand-primary file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:bg-brand-primary/20 hover:file:bg-brand-primary/30"
+                />
+                <Button type="button" onClick={handleImageUpload} disabled={!selectedImageFile || isUploadingImage} className="bg-accent hover:bg-accent/80 text-accent-foreground shrink-0 w-full sm:w-auto">
+                  <UploadCloud className="mr-2 h-4 w-4" /> {isUploadingImage ? 'Uploading...' : 'Upload Image'}
+                </Button>
+              </div>
+              {itemDetails.imageUrl && (
+                <div className="mt-3">
+                  <Label className="text-neutral-extralight text-xs">Current Image URL:</Label>
+                  <Input type="text" value={itemDetails.imageUrl} readOnly className="bg-neutral-dark border-neutral-light text-neutral-extralight/70 text-xs h-8 mt-1" />
+                  <div className="mt-2 relative w-full aspect-[16/7] max-w-md rounded border border-neutral-light overflow-hidden">
+                    <Image src={itemDetails.imageUrl} alt="Slider image preview" layout="fill" objectFit="cover" />
+                  </div>
+                </div>
+              )}
+              {!itemDetails.imageUrl && !selectedImageFile && (
+                <p className="text-xs text-neutral-extralight/70 mt-1">
+                  Select an image file (e.g., 1200x500px) and click "Upload Image".
+                </p>
+              )}
             </div>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -180,7 +244,7 @@ export default function ManageSliderPage() {
                             data-ai-hint={item.dataAiHint || "slider image"}
                         />
                     </div>
-                    <div className="flex-1 min-w-0"> {/* Added min-w-0 for better truncation */}
+                    <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-white truncate" title={item.title}>{item.title}</h3>
                         <p className="text-xs text-neutral-extralight/80 truncate" title={item.description}>{item.description}</p>
                         <p className="text-xs text-neutral-extralight/70">Button: "{item.buttonText}" to {item.buttonHref}</p>
@@ -205,3 +269,5 @@ export default function ManageSliderPage() {
     </div>
   );
 }
+
+    

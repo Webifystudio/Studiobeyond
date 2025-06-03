@@ -1,13 +1,13 @@
 
 "use client";
 
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, UploadCloud } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { db, serverTimestamp, doc, getDoc, updateDoc, arrayUnion, arrayRemove, type Timestamp } from '@/lib/firebase';
 import Link from 'next/link';
@@ -20,6 +20,8 @@ interface ChapterData {
   createdAt: Timestamp;
 }
 
+const IMGBB_API_KEY = "2bb2346a6a907388d8a3b0beac2bca86";
+
 export default function EditChapterImagesPage() {
   const router = useRouter();
   const params = useParams();
@@ -27,10 +29,11 @@ export default function EditChapterImagesPage() {
   const chapterId = params.chapterId as string;
 
   const [chapterDetails, setChapterDetails] = useState<ChapterData | null>(null);
-  const [newImageUrl, setNewImageUrl] = useState('');
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSaving, setIsSaving] = useState(false); // For download link saving
   const { toast } = useToast();
 
   const fetchChapterData = async () => {
@@ -58,31 +61,66 @@ export default function EditChapterImagesPage() {
     fetchChapterData();
   }, [pageId, chapterId]);
 
-  const handleAddImage = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!newImageUrl.trim() || !chapterDetails) {
-      toast({ title: "Error", description: "Image URL cannot be empty.", variant: "destructive" });
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedImageFile(e.target.files[0]);
+    } else {
+      setSelectedImageFile(null);
+    }
+  };
+
+  const handleImageUploadAndAdd = async () => {
+    if (!selectedImageFile || !chapterDetails) {
+      toast({ title: "No File Selected", description: "Please select an image file to upload.", variant: "destructive" });
       return;
     }
-    setIsSaving(true);
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('image', selectedImageFile);
+    formData.append('key', IMGBB_API_KEY);
+
+    let imgbbUrl = '';
+    try {
+      const response = await fetch('https://api.imgbb.com/1/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const result = await response.json();
+      if (result.success) {
+        imgbbUrl = result.data.display_url;
+        toast({ title: "Image Uploaded to ImgBB", description: "Image successfully uploaded. Adding to chapter..." });
+      } else {
+        throw new Error(result.error?.message || 'ImgBB upload failed');
+      }
+    } catch (error: any) {
+      console.error("Error uploading image to ImgBB: ", error);
+      toast({ title: "Upload Error", description: error.message || "Could not upload image.", variant: "destructive" });
+      setIsUploading(false);
+      return;
+    }
+
+    // If upload was successful, add the URL to Firestore
     try {
       const chapterRef = doc(db, 'customPages', pageId, 'chapters', chapterId);
       await updateDoc(chapterRef, {
-        imageUrls: arrayUnion(newImageUrl.trim())
+        imageUrls: arrayUnion(imgbbUrl)
       });
       toast({ title: "Image Added", description: "Image added to chapter successfully." });
-      setNewImageUrl('');
+      setSelectedImageFile(null); // Clear file input
+      const fileInput = document.getElementById('chapterImageFile') as HTMLInputElement;
+      if(fileInput) fileInput.value = ''; // Reset file input visually
       fetchChapterData(); 
-    } catch (error) {
-      console.error("Error adding image to chapter: ", error);
-      toast({ title: "Error", description: "Could not add image.", variant: "destructive" });
+    } catch (error: any) {
+      console.error("Error adding image URL to chapter: ", error);
+      toast({ title: "Error", description: error.message || "Could not add image to chapter.", variant: "destructive" });
     }
-    setIsSaving(false);
+    setIsUploading(false);
   };
+
 
   const handleRemoveImage = async (imageUrlToRemove: string) => {
     if (!chapterDetails || !confirm("Are you sure you want to remove this image?")) return;
-    setIsSaving(true);
+    setIsSaving(true); // Re-use isSaving for this action as well, or use a new state
     try {
       const chapterRef = doc(db, 'customPages', pageId, 'chapters', chapterId);
       await updateDoc(chapterRef, {
@@ -90,9 +128,9 @@ export default function EditChapterImagesPage() {
       });
       toast({ title: "Image Removed", description: "Image removed from chapter successfully." });
       fetchChapterData(); 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error removing image from chapter: ", error);
-      toast({ title: "Error", description: "Could not remove image.", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Could not remove image.", variant: "destructive" });
     }
     setIsSaving(false);
   };
@@ -104,13 +142,13 @@ export default function EditChapterImagesPage() {
     try {
       const chapterRef = doc(db, 'customPages', pageId, 'chapters', chapterId);
       await updateDoc(chapterRef, {
-        downloadLink: downloadUrl.trim() || null // Store null if empty
+        downloadLink: downloadUrl.trim() || null 
       });
       toast({ title: "Download Link Saved", description: "Download link updated successfully." });
       fetchChapterData();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving download link: ", error);
-      toast({ title: "Error", description: "Could not save download link.", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Could not save download link.", variant: "destructive" });
     }
     setIsSaving(false);
   };
@@ -165,29 +203,32 @@ export default function EditChapterImagesPage() {
             <PlusCircle className="mr-2 h-5 w-5 text-brand-primary" /> Add New Image
           </CardTitle>
           <CardDescription className="text-neutral-extralight/80">
-            Add image URLs one by one. Images will appear in the order they are added.
-            Upload images to <a href="https://imgbb.com/" target="_blank" rel="noopener noreferrer" className="text-brand-primary hover:underline">ImgBB</a> or similar, then paste the direct image URL.
+            Select an image file to upload to ImgBB and add to this chapter. Images appear in added order.
           </CardDescription>
         </CardHeader>
-        <form onSubmit={handleAddImage}>
-          <CardContent className="space-y-4">
+        <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="newImageUrl" className="text-neutral-extralight">Image URL</Label>
+              <Label htmlFor="chapterImageFile" className="text-neutral-extralight">Image File</Label>
               <Input
-                id="newImageUrl"
-                type="url"
-                value={newImageUrl}
-                onChange={(e) => setNewImageUrl(e.target.value)}
-                placeholder="https://i.ibb.co/your-image.jpg"
-                required
-                className="bg-neutral-light border-neutral-light text-neutral-extralight focus:ring-brand-primary"
+                id="chapterImageFile"
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="bg-neutral-light border-neutral-light text-neutral-extralight focus:ring-brand-primary file:text-sm file:font-medium file:text-brand-primary file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:bg-brand-primary/20 hover:file:bg-brand-primary/30"
               />
             </div>
-            <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white" disabled={isSaving}>
-              {isSaving ? 'Adding Image...' : 'Add Image to Chapter'}
+            <Button 
+              type="button" 
+              onClick={handleImageUploadAndAdd} 
+              className="bg-brand-primary hover:bg-brand-primary/80 text-white" 
+              disabled={!selectedImageFile || isUploading}
+            >
+              <UploadCloud className="mr-2 h-4 w-4" /> {isUploading ? 'Uploading & Adding...' : 'Upload & Add Image'}
             </Button>
-          </CardContent>
-        </form>
+             {selectedImageFile && (
+                <p className="text-xs text-neutral-extralight/70">Selected: {selectedImageFile.name}</p>
+             )}
+        </CardContent>
       </Card>
 
       <Card className="bg-neutral-medium border-neutral-light">
@@ -210,7 +251,11 @@ export default function EditChapterImagesPage() {
                       objectFit="contain"
                       className="rounded"
                       data-ai-hint="manga page scan"
-                       onError={(e) => (e.currentTarget.src = 'https://placehold.co/300x450/2D3748/A0AEC0?text=Error')}
+                       onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null; 
+                          target.src='https://placehold.co/300x450/2D3748/A0AEC0?text=Error+Loading';
+                       }}
                     />
                   </div>
                   <Button
@@ -219,7 +264,7 @@ export default function EditChapterImagesPage() {
                     className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity bg-red-600/80 hover:bg-red-500/90"
                     onClick={() => handleRemoveImage(url)}
                     aria-label="Remove image"
-                    disabled={isSaving}
+                    disabled={isSaving || isUploading} // Disable if any operation is in progress
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

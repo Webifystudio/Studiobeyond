@@ -8,11 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Save, ArrowLeft, ExternalLink, PlusCircle, Trash2, Edit3, ImageIcon } from 'lucide-react';
+import { Save, ArrowLeft, ExternalLink, PlusCircle, Trash2, Edit3, ImageIcon, UploadCloud } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { db, serverTimestamp } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, Timestamp, addDoc, collection, getDocs, deleteDoc, query, orderBy } from 'firebase/firestore';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface CustomPageData {
   pageName: string;
@@ -47,6 +48,8 @@ const initialPageDetails: CustomPageData = {
   views: 0,
 };
 
+const IMGBB_API_KEY = "2bb2346a6a907388d8a3b0beac2bca86";
+
 export default function EditCustomPage() {
   const router = useRouter();
   const params = useParams();
@@ -58,6 +61,8 @@ export default function EditCustomPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingChapters, setIsLoadingChapters] = useState(true);
+  const [selectedLandingImageFile, setSelectedLandingImageFile] = useState<File | null>(null);
+  const [isUploadingLandingImage, setIsUploadingLandingImage] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -105,6 +110,44 @@ export default function EditCustomPage() {
     setPageDetails(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleLandingImageFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedLandingImageFile(e.target.files[0]);
+    } else {
+      setSelectedLandingImageFile(null);
+    }
+  };
+
+  const handleLandingImageUpload = async () => {
+    if (!selectedLandingImageFile) {
+      toast({ title: "No File Selected", description: "Please select a landing image file.", variant: "destructive" });
+      return;
+    }
+    setIsUploadingLandingImage(true);
+    const formData = new FormData();
+    formData.append('image', selectedLandingImageFile);
+    formData.append('key', IMGBB_API_KEY);
+
+    try {
+      const response = await fetch('https://api.imgbb.com/1/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const result = await response.json();
+      if (result.success) {
+        setPageDetails(prev => ({ ...prev, landingImageUrl: result.data.display_url }));
+        toast({ title: "Landing Image Uploaded", description: "Image successfully uploaded." });
+        setSelectedLandingImageFile(null);
+      } else {
+        throw new Error(result.error?.message || 'ImgBB upload failed');
+      }
+    } catch (error: any) {
+      console.error("Error uploading landing image: ", error);
+      toast({ title: "Upload Error", description: error.message || "Could not upload landing image.", variant: "destructive" });
+    }
+    setIsUploadingLandingImage(false);
+  };
+
   const handleSaveChanges = async (e: FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -115,9 +158,9 @@ export default function EditCustomPage() {
         updatedAt: serverTimestamp()
       });
       toast({ title: "Page Updated", description: `Page "${pageDetails.title}" updated successfully.` });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating page: ", error);
-      toast({ title: "Error", description: "Could not update page.", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Could not update page.", variant: "destructive" });
     }
     setIsSaving(false);
   };
@@ -138,9 +181,9 @@ export default function EditCustomPage() {
       toast({ title: "Chapter Added", description: `Chapter "${newChapterName}" added.` });
       setNewChapterName('');
       fetchChapters();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding chapter:", error);
-      toast({ title: "Error", description: "Could not add chapter.", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Could not add chapter.", variant: "destructive" });
     }
   };
 
@@ -151,9 +194,9 @@ export default function EditCustomPage() {
       await deleteDoc(chapterRef);
       toast({ title: "Chapter Deleted", description: `Chapter "${chapterName}" deleted.` });
       fetchChapters();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting chapter:", error);
-      toast({ title: "Error", description: "Could not delete chapter.", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Could not delete chapter.", variant: "destructive" });
     }
   };
   
@@ -209,11 +252,33 @@ export default function EditCustomPage() {
                 </div>
             </div>
             <div>
-              <Label htmlFor="landingImageUrl" className="text-neutral-extralight">Landing Image URL (Optional)</Label>
-              <Input id="landingImageUrl" name="landingImageUrl" type="url" value={pageDetails.landingImageUrl} onChange={handleChange} placeholder="https://placehold.co/1200x600.png" className="bg-neutral-light text-neutral-extralight" />
-               <p className="text-xs text-neutral-extralight/70 mt-1">
-                Upload your image to a service like <a href="https://imgbb.com/" target="_blank" rel="noopener noreferrer" className="text-brand-primary hover:underline">ImgBB</a> and paste the direct image URL here.
-              </p>
+              <Label htmlFor="landingImageFile" className="text-neutral-extralight">Landing Image</Label>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1">
+                <Input 
+                  id="landingImageFile" 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleLandingImageFileChange} 
+                  className="bg-neutral-light text-neutral-extralight flex-grow file:text-sm file:font-medium file:text-brand-primary file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:bg-brand-primary/20 hover:file:bg-brand-primary/30"
+                />
+                <Button type="button" onClick={handleLandingImageUpload} disabled={!selectedLandingImageFile || isUploadingLandingImage} className="bg-accent hover:bg-accent/80 text-accent-foreground shrink-0 w-full sm:w-auto">
+                  <UploadCloud className="mr-2 h-4 w-4" /> {isUploadingLandingImage ? 'Uploading...' : 'Upload Landing Image'}
+                </Button>
+              </div>
+              {pageDetails.landingImageUrl && (
+                <div className="mt-3">
+                  <Label className="text-neutral-extralight text-xs">Current Landing Image URL:</Label>
+                  <Input type="text" value={pageDetails.landingImageUrl} readOnly className="bg-neutral-dark border-neutral-light text-neutral-extralight/70 text-xs h-8 mt-1" />
+                   <div className="mt-2 relative w-full aspect-[16/9] max-w-md rounded border border-neutral-light overflow-hidden">
+                    <Image src={pageDetails.landingImageUrl} alt="Landing image preview" layout="fill" objectFit="cover" />
+                  </div>
+                </div>
+              )}
+               {!pageDetails.landingImageUrl && !selectedLandingImageFile && (
+                 <p className="text-xs text-neutral-extralight/70 mt-1">
+                    Select an image file (e.g., 1200x600px) and click "Upload Landing Image".
+                 </p>
+              )}
             </div>
             <div>
               <Label htmlFor="dataAiHint" className="text-neutral-extralight">AI Image Hint (Optional)</Label>
@@ -227,7 +292,6 @@ export default function EditCustomPage() {
         </form>
       </Card>
 
-      {/* Chapters Management Section */}
       <Card className="bg-neutral-medium border-neutral-light">
         <CardHeader>
           <CardTitle className="text-lg md:text-xl text-white font-headline flex items-center">
@@ -292,3 +356,5 @@ export default function EditCustomPage() {
     </div>
   );
 }
+
+    
