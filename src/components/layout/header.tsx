@@ -2,13 +2,13 @@
 "use client";
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type KeyboardEvent } from 'react'; // Added KeyboardEvent
 import { Search, Menu as MenuIcon, X, LogIn, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation'; // useRouter imported
 import { auth, signOut, onAuthStateChanged, type User } from '@/lib/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -32,6 +32,7 @@ export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  const [searchTerm, setSearchTerm] = useState(''); // State for search input
   const pathname = usePathname();
   const router = useRouter();
 
@@ -50,7 +51,7 @@ export function Header() {
   const handleLogout = async () => {
     await signOut();
     setCurrentUser(null);
-    router.push('/'); // Redirect to home or login page after logout
+    router.push('/'); 
   };
   
   const getInitials = (name: string | null | undefined) => {
@@ -59,6 +60,26 @@ export function Header() {
     if (names.length === 1) return names[0][0]?.toUpperCase() || "?";
     return (names[0][0] + (names[names.length - 1][0] || '')).toUpperCase();
   };
+
+  const handleSearch = (e: KeyboardEvent<HTMLInputElement> | React.MouseEvent<HTMLButtonElement>) => {
+    // Check if it's a KeyboardEvent and if 'Enter' was pressed, or if it's a MouseEvent (for a potential future search button)
+    if ((e as KeyboardEvent<HTMLInputElement>).key === 'Enter' || e.type === 'click') {
+      e.preventDefault();
+      if (searchTerm.trim()) {
+        router.push(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+        setSearchTerm(''); // Optionally clear search term after navigation
+      }
+    }
+  };
+  
+  const handleMobileSearchSubmit = () => {
+     if (searchTerm.trim()) {
+        router.push(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+        setSearchTerm(''); 
+        setIsMobileMenuOpen(false); // Close mobile menu
+      }
+  }
+
 
   return (
     <header className="bg-neutral-medium shadow-lg sticky top-0 z-50">
@@ -88,6 +109,9 @@ export function Header() {
               <Input
                 type="text"
                 placeholder="Search manga..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={handleSearch}
                 className="bg-neutral-light text-neutral-extralight placeholder-neutral-extralight/70 rounded-full py-2 px-4 pl-10 focus:outline-none focus:ring-2 focus:ring-brand-primary transition duration-300 w-40 lg:w-64 h-10"
               />
               <Search className="w-5 h-5 text-neutral-extralight absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none" />
@@ -162,29 +186,36 @@ export function Header() {
                             </Button>
                         </SheetClose>
                    </div>
-                <nav className="flex flex-col space-y-1 items-center">
-                  {navItems.map((item) => (
-                     <SheetClose asChild key={item.label}>
-                        <Link
-                            href={item.href}
-                            className={cn(
-                                "block py-3 px-4 rounded-md text-neutral-extralight hover:bg-neutral-light hover:text-brand-primary transition duration-300 font-inter text-lg w-full text-center",
-                                pathname === item.href && "bg-neutral-light text-brand-primary"
-                            )}
-                        >
-                        {item.label}
-                        </Link>
-                    </SheetClose>
-                  ))}
-                  <div className="relative mt-4 w-full max-w-xs sm:hidden px-2">
-                    <Input
-                      type="text"
-                      placeholder="Search manga..."
-                      className="bg-neutral-light text-neutral-extralight placeholder-neutral-extralight/70 rounded-full py-2 px-4 pl-10 focus:outline-none focus:ring-2 focus:ring-brand-primary transition duration-300 w-full h-10"
-                    />
-                    <Search className="w-5 h-5 text-neutral-extralight absolute left-5 top-1/2 transform -translate-y-1/2 pointer-events-none" />
-                  </div>
-                </nav>
+                  <nav className="flex flex-col space-y-1 items-center">
+                    {navItems.map((item) => (
+                       <SheetClose asChild key={item.label}>
+                          <Link
+                              href={item.href}
+                              className={cn(
+                                  "block py-3 px-4 rounded-md text-neutral-extralight hover:bg-neutral-light hover:text-brand-primary transition duration-300 font-inter text-lg w-full text-center",
+                                  pathname === item.href && "bg-neutral-light text-brand-primary"
+                              )}
+                          >
+                          {item.label}
+                          </Link>
+                      </SheetClose>
+                    ))}
+                    <div className="relative mt-4 w-full max-w-xs sm:hidden px-2">
+                      <Input
+                        type="text"
+                        placeholder="Search manga..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleMobileSearchSubmit(); }}
+                        className="bg-neutral-light text-neutral-extralight placeholder-neutral-extralight/70 rounded-full py-2 px-4 pl-10 focus:outline-none focus:ring-2 focus:ring-brand-primary transition duration-300 w-full h-10"
+                      />
+                      <Search className="w-5 h-5 text-neutral-extralight absolute left-5 top-1/2 transform -translate-y-1/2 pointer-events-none" />
+                       {/* Optional: Add a search button for mobile if Enter key is not intuitive enough */}
+                       {/* <Button onClick={handleMobileSearchSubmit} size="icon" className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                           <Search className="w-5 h-5" />
+                       </Button> */}
+                    </div>
+                  </nav>
                 </div>
               </SheetContent>
             </Sheet>
