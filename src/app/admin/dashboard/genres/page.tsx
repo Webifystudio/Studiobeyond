@@ -10,10 +10,12 @@ import { PlusCircle, List, Trash2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { db, serverTimestamp } from '@/lib/firebase';
 import { collection, addDoc, getDocs, deleteDoc, doc, orderBy, query, Timestamp } from 'firebase/firestore';
+import { generateSlug } from '@/lib/utils';
 
 interface Genre {
   id: string;
   name: string;
+  slug: string;
   createdAt: Timestamp;
 }
 
@@ -51,9 +53,16 @@ export default function ManageGenresPage() {
       toast({ title: "Error", description: "Genre name cannot be empty.", variant: "destructive" });
       return;
     }
+    const slug = generateSlug(genreName.trim());
+    if (!slug) {
+        toast({ title: "Error", description: "Could not generate a valid slug for the genre name.", variant: "destructive" });
+        return;
+    }
+
     try {
       await addDoc(collection(db, 'genres'), {
         name: genreName.trim(),
+        slug: slug,
         createdAt: serverTimestamp()
       });
       toast({ title: "Genre Added", description: `Genre "${genreName}" added successfully.` });
@@ -130,7 +139,10 @@ export default function ManageGenresPage() {
             <ul className="space-y-2">
               {genres.map((genre) => (
                 <li key={genre.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-neutral-light rounded-md shadow gap-2 sm:gap-0">
-                  <span className="text-neutral-extralight flex-grow">{genre.name}</span>
+                  <div className="flex-grow">
+                    <span className="text-neutral-extralight">{genre.name}</span>
+                    <p className="text-xs text-neutral-extralight/70">Slug: {genre.slug}</p>
+                  </div>
                   <Button 
                     variant="ghost" 
                     size="icon" 

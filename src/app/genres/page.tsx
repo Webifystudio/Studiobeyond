@@ -11,6 +11,7 @@ import { collection, getDocs, query, orderBy, Timestamp } from 'firebase/firesto
 interface GenreDoc {
   id: string;
   name: string;
+  slug: string; // Expecting slug to be present
   createdAt: Timestamp;
 }
 
@@ -18,14 +19,17 @@ async function getAllGenres(): Promise<GenreItem[]> {
   try {
     const genresQuery = query(collection(db, 'genres'), orderBy('name', 'asc'));
     const genresSnapshot = await getDocs(genresQuery);
-    return genresSnapshot.docs.map(doc => {
-      const data = doc.data() as Omit<GenreDoc, 'id'>;
-      return {
-        id: doc.id,
-        name: data.name,
-        href: `/genre/${encodeURIComponent(data.name.toLowerCase())}`,
-      };
-    });
+    return genresSnapshot.docs
+      .map(doc => {
+        const data = doc.data() as Omit<GenreDoc, 'id'>;
+        // Ensure slug exists, otherwise fallback to generating one from name for the link
+        const slug = data.slug || data.name.toLowerCase().replace(/\s+/g, '-');
+        return {
+          id: doc.id,
+          name: data.name,
+          href: `/genre/${encodeURIComponent(slug)}`,
+        };
+      });
   } catch (error) {
     console.error("Error fetching all genres: ", error);
     return [];

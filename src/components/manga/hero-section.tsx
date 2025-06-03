@@ -1,3 +1,4 @@
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,7 @@ interface HeroSectionProps {
 
 export function HeroSection({ title, description, imageUrl, imageAlt, buttonText, buttonHref, dataAiHint }: HeroSectionProps) {
   return (
-    <section className="relative rounded-2xl overflow-hidden mb-12 h-[60vh] max-h-[500px] flex items-end p-6 sm:p-10">
+    <section className="relative overflow-hidden mb-12 min-h-[60vh] sm:min-h-[70vh] lg:min-h-[500px] flex items-end p-6 sm:p-10">
       <Image
         src={imageUrl}
         alt={imageAlt}
@@ -24,6 +25,7 @@ export function HeroSection({ title, description, imageUrl, imageAlt, buttonText
         quality={85}
         className="z-0"
         data-ai-hint={dataAiHint || "featured manga anime"}
+        priority
       />
       <div className="absolute inset-0 hero-gradient z-0"></div>
       <div className="relative z-10 text-white">
