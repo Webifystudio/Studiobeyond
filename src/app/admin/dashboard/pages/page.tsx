@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, List, Trash2, ExternalLink } from 'lucide-react';
+import { PlusCircle, List, Trash2, ExternalLink, Edit } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { db, serverTimestamp } from '@/lib/firebase';
 import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, Timestamp } from 'firebase/firestore';
@@ -17,13 +17,13 @@ interface CustomPage {
   id: string;
   pageName: string;
   pageSlug: string;
-  // Fields to be added in page configuration step:
-  // title?: string;
-  // description?: string;
-  // author?: string;
-  // category?: string;
-  // landingImageUrl?: string;
-  // dataAiHint?: string;
+  title?: string;
+  description?: string;
+  author?: string;
+  category?: string;
+  landingImageUrl?: string;
+  dataAiHint?: string;
+  views?: number;
   createdAt: Timestamp;
 }
 
@@ -72,13 +72,13 @@ export default function ManagePagesPage() {
         pageName: newPageName.trim(),
         pageSlug: slug,
         createdAt: serverTimestamp(),
-        // Initialize other fields as needed, or handle them in the config step
-        title: newPageName.trim(), // Default title to page name
+        title: newPageName.trim(), 
         description: "",
         author: "",
         category: "",
         landingImageUrl: "",
-        dataAiHint: ""
+        dataAiHint: "",
+        views: 0,
       });
       toast({ title: "Page Created", description: `Page "${newPageName}" created successfully.` });
       setNewPageName('');
@@ -113,7 +113,7 @@ export default function ManagePagesPage() {
             <PlusCircle className="mr-2 h-5 w-5 text-brand-primary" /> Create New Page
           </CardTitle>
           <CardDescription className="text-neutral-extralight/80">
-            Create a new custom page for your site.
+            Create a new custom page for your site. Configure its content after creation.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleAddPage}>
@@ -142,7 +142,7 @@ export default function ManagePagesPage() {
             <List className="mr-2 h-5 w-5 text-brand-primary" /> Existing Custom Pages
           </CardTitle>
           <CardDescription className="text-neutral-extralight/80">
-            List of currently created custom pages. (Configuration coming soon)
+            List of currently created custom pages.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -159,11 +159,14 @@ export default function ManagePagesPage() {
                     <p className="text-xs text-neutral-extralight/70">Slug: {page.pageSlug}</p>
                   </div>
                   <div className="flex items-center gap-2 self-end sm:self-center">
-                     {/* Link to future configuration page - for now, just a placeholder or disabled */}
-                    {/* <Button variant="outline" size="sm" disabled className="text-xs">Configure</Button> */}
+                    <Button variant="outline" size="sm" asChild className="text-xs">
+                      <Link href={`/admin/dashboard/pages/edit/${page.id}`}>
+                        <Edit className="mr-1 h-3 w-3" /> Configure
+                      </Link>
+                    </Button>
                      <Link href={`/p/${page.pageSlug}`} target="_blank" legacyBehavior>
                         <a className="text-brand-primary hover:underline text-xs flex items-center">
-                            <ExternalLink className="h-3 w-3 mr-1" /> View Public Page
+                            <ExternalLink className="h-3 w-3 mr-1" /> View
                         </a>
                     </Link>
                     <Button 

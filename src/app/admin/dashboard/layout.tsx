@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { LayoutDashboard, Tag, BookOpen, Image as ImageIcon, LogOut, Home, FileText, Link2 } from 'lucide-react';
+import { LayoutDashboard, Tag, BookOpen, Image as ImageIcon, LogOut, Home, FileText, Link2, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -51,7 +51,7 @@ export default function AdminDashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-neutral-dark text-neutral-extralight">
-      <aside className="w-64 bg-neutral-medium border-r border-neutral-light p-4 flex flex-col hidden md:flex"> {/* Hide sidebar on small screens, show on md and up */}
+      <aside className="w-64 bg-neutral-medium border-r border-neutral-light p-4 flex flex-col hidden md:flex">
         <div className="mb-8">
           <Link href="/admin/dashboard" className="text-2xl font-bold text-brand-primary font-inter">
             BEYOND SCANS Admin
@@ -62,10 +62,10 @@ export default function AdminDashboardLayout({
             {navItems.map((item) => (
               <Button
                 key={item.label}
-                variant={pathname === item.href ? 'secondary' : 'ghost'}
+                variant={pathname === item.href || (item.href !== '/admin/dashboard' && pathname.startsWith(item.href)) ? 'secondary' : 'ghost'}
                 className={cn(
                   "w-full justify-start",
-                  pathname === item.href ? "bg-brand-primary/20 text-brand-primary hover:bg-brand-primary/30" : "hover:bg-neutral-light hover:text-white"
+                  (pathname === item.href || (item.href !== '/admin/dashboard' && pathname.startsWith(item.href))) ? "bg-brand-primary/20 text-brand-primary hover:bg-brand-primary/30" : "hover:bg-neutral-light hover:text-white"
                 )}
                 asChild
               >
