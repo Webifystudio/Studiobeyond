@@ -5,8 +5,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { MangaGrid, type MangaItem } from '@/components/manga/manga-grid';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { db, collection, getDocs, query, where, orderBy, limit, type Timestamp } from '@/lib/firebase'; // Import directly
 
 interface GenrePageProps {
   params: { genreName: string }; // This will be the slug
@@ -18,15 +17,16 @@ interface MangaDoc {
   chapters: number;
   status: string;
   imageUrl: string;
-  genres: string[]; // Array of exact genre names
+  genres: string[]; 
   dataAiHint?: string;
   createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
 
 interface GenreDoc {
   id: string;
-  name: string; // The canonical name, e.g., "Sci-Fi"
-  slug: string;  // The URL-friendly slug, e.g., "sci-fi"
+  name: string; 
+  slug: string; 
 }
 
 async function getMangaByGenre(genreSlug: string): Promise<{ mangaList: MangaItem[], canonicalGenreName: string | null }> {
@@ -34,21 +34,21 @@ async function getMangaByGenre(genreSlug: string): Promise<{ mangaList: MangaIte
   let mangaList: MangaItem[] = [];
 
   try {
-    // 1. Find the genre document by its slug to get the canonical name
     const genresCollectionRef = collection(db, 'genres');
     const genreQuery = query(genresCollectionRef, where('slug', '==', genreSlug), limit(1));
     const genreSnapshot = await getDocs(genreQuery);
 
     if (!genreSnapshot.empty) {
-      const genreDoc = genreSnapshot.docs[0].data() as GenreDoc;
-      canonicalGenreName = genreDoc.name;
+      const genreDocData = genreSnapshot.docs[0].data() as GenreDoc;
+      canonicalGenreName = genreDocData.name;
 
-      // 2. Use the canonical name to query mangas
       if (canonicalGenreName) {
+        const mangasCollectionRef = collection(db, 'mangas');
+        // Ensure the query uses the exact, case-sensitive canonicalGenreName
         const mangasQuery = query(
-          collection(db, 'mangas'),
+          mangasCollectionRef,
           where('genres', 'array-contains', canonicalGenreName),
-          orderBy('createdAt', 'desc')
+          orderBy('updatedAt', 'desc') // Or 'createdAt' or 'title' as preferred
         );
         const mangaSnapshot = await getDocs(mangasQuery);
         mangaList = mangaSnapshot.docs.map(doc => {
@@ -89,12 +89,16 @@ export default async function GenreSpecificPage({ params }: GenrePageProps) {
         {mangaList.length > 0 ? (
             <MangaGrid title={`${pageTitle} Manga`} mangaList={mangaList} />
         ) : (
-            <div className="text-center">
+            <div className="text-center py-10">
                 <h1 className="text-3xl font-bold text-white mb-4 font-headline">{pageTitle} Manga</h1>
                 <p className="text-neutral-extralight">
-                  No manga found for this genre. Ensure the genre exists and mangas are correctly assigned to it in the admin panel.
-                  {canonicalGenreName === null && " Also, the genre slug in the URL might not match any existing genre."}
+                  No manga found for this genre. 
+                  {canonicalGenreName === null && "The genre slug in the URL might not match any existing genre. "}
+                  Ensure mangas are correctly assigned to the genre <span className="font-semibold text-brand-primary">{`"${pageTitle}"`}</span> in the admin panel.
                 </p>
+                <Button asChild className="mt-6">
+                  <Link href="/admin/dashboard/assign-manga-genre">Assign Manga to Genre</Link>
+                </Button>
             </div>
         )}
       </main>
@@ -118,4 +122,6 @@ export async function generateStaticParams() {
   }
 }
 
-export const revalidate = 0; // Changed from 60 to 0
+export const revalidate = 0; 
+
+    

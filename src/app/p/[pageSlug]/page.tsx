@@ -5,12 +5,13 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Home, Search, Share2, ThumbsUp, MessageCircle, Eye, ArrowLeft, X as CloseIcon } from 'lucide-react';
+import { Home, Search, Share2, ThumbsUp, MessageCircle, Eye, ArrowLeft, X as CloseIcon, DownloadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { db, serverTimestamp, collection, query, where, getDocs, doc, updateDoc, increment, Timestamp, orderBy } from '@/lib/firebase';
+import { db, serverTimestamp, collection, query, where, getDocs, doc, updateDoc, increment, Timestamp, orderBy, auth, onAuthStateChanged, type User } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'; // Added Card imports
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 
 interface CustomPageData {
   id: string;
@@ -30,16 +31,18 @@ interface ChapterItem {
   id: string;
   name: string;
   imageUrls: string[];
+  downloadLink?: string;
   createdAt: Timestamp;
 }
 
 export default function PublicCustomPage() {
   const params = useParams();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const pageSlug = params.pageSlug as string;
   const { toast } = useToast();
 
+  const pageSlug = params.pageSlug as string;
+  
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [pageData, setPageData] = useState<CustomPageData | null>(null);
   const [chapters, setChapters] = useState<ChapterItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -47,8 +50,15 @@ export default function PublicCustomPage() {
   
   const [selectedChapter, setSelectedChapter] = useState<ChapterItem | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
 
-  // Effect for fetching page data and incrementing views
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
+  
   useEffect(() => {
     if (!pageSlug) return;
 
@@ -74,7 +84,6 @@ export default function PublicCustomPage() {
             setPageData(prev => prev ? { ...prev, views: (prev.views || 0) + 1 } : null);
           }
           
-          // Fetch chapters after page data is loaded
           fetchChapters(docSnap.id);
 
         } else {
@@ -110,12 +119,20 @@ export default function PublicCustomPage() {
     setIsLoadingChapters(false);
   };
 
-
   const handleInteraction = (action: string) => {
+    if (!currentUser) {
+      toast({
+        title: "Login Required",
+        description: `You need to be logged in to ${action}.`,
+        action: <Button variant="outline" size="sm" onClick={() => router.push('/login')}>Login</Button>
+      });
+      router.push('/login');
+      return;
+    }
+    // Placeholder for actual like/comment logic
     toast({
-      title: "Login Required",
-      description: `You need to be logged in to ${action}. This feature is coming soon!`,
-      action: <Button variant="outline" size="sm" onClick={() => router.push('/login')}>Login</Button>
+      title: "Coming Soon!",
+      description: `The ability to ${action} is under development.`,
     });
   };
   
@@ -130,7 +147,6 @@ export default function PublicCustomPage() {
         toast({title: "Shared successfully!"});
       } catch (error) {
         console.error('Error sharing:', error);
-        // toast({title: "Could not share", description: "Sharing failed or was cancelled.", variant: "destructive"});
       }
     } else {
          try {
@@ -172,7 +188,6 @@ export default function PublicCustomPage() {
       openChapterViewer(chapters[currentChapterIndexInList - 1]);
     }
   };
-
 
   if (isLoading) {
     return (
@@ -219,14 +234,12 @@ export default function PublicCustomPage() {
   const displayTitle = pageData.title || pageData.pageName;
 
   if (selectedChapter) {
-    // Chapter Image Viewer Mode
     const totalImages = selectedChapter.imageUrls.length;
     const currentImageUrl = selectedChapter.imageUrls[currentImageIndex];
     const currentChapterIndexInList = chapters.findIndex(ch => ch.id === selectedChapter.id);
 
     return (
       <div className="flex flex-col min-h-screen bg-black text-white">
-        {/* Viewer Navigation */}
         <nav className="fixed top-0 left-0 right-0 z-50 p-2 sm:p-4 flex justify-between items-center bg-black/70 backdrop-blur-sm">
           <Button variant="ghost" size="icon" onClick={closeChapterViewer} className="hover:bg-white/10">
             <ArrowLeft className="h-6 w-6" />
@@ -257,16 +270,14 @@ export default function PublicCustomPage() {
             </Button>
           </div>
         </nav>
-
-        {/* Image Display Area */}
         <main className="flex-grow flex items-center justify-center pt-16 pb-16 sm:pt-20 sm:pb-20 overflow-hidden">
           {totalImages > 0 && currentImageUrl ? (
             <Image
-              key={currentImageUrl} // Force re-render on URL change
+              key={currentImageUrl}
               src={currentImageUrl}
               alt={`Page ${currentImageIndex + 1} of ${selectedChapter.name}`}
-              width={800} // Intrinsic width, will be styled by CSS
-              height={1200} // Intrinsic height
+              width={800} 
+              height={1200} 
               className="max-w-full max-h-full object-contain"
               data-ai-hint="manga page"
               onError={(e) => (e.currentTarget.src = 'https://placehold.co/800x1200/000000/FFFFFF?text=Error+Loading+Image')}
@@ -275,8 +286,6 @@ export default function PublicCustomPage() {
             <p className="text-neutral-400">{totalImages === 0 ? "No images in this chapter." : "Error loading image."}</p>
           )}
         </main>
-
-        {/* Viewer Footer Navigation */}
         <footer className="fixed bottom-0 left-0 right-0 z-50 p-2 sm:p-4 flex justify-between items-center bg-black/70 backdrop-blur-sm">
           <Button 
             variant="ghost" 
@@ -303,8 +312,6 @@ export default function PublicCustomPage() {
     );
   }
 
-
-  // Default Page View
   return (
     <div className="flex flex-col min-h-screen bg-neutral-dark text-white">
       <nav className="fixed top-0 left-0 right-0 z-50 p-4 flex justify-between items-center bg-transparent transition-all duration-300 hover:bg-black/30">
@@ -324,7 +331,6 @@ export default function PublicCustomPage() {
       </nav>
 
       <main className="relative flex-grow">
-        {/* Landing Section */}
         <section className="relative flex items-end min-h-[70vh] sm:min-h-screen">
           {pageData.landingImageUrl && (
             <Image
@@ -338,18 +344,15 @@ export default function PublicCustomPage() {
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent z-10"></div>
-
           <div className="relative z-20 container mx-auto px-4 sm:px-6 lg:px-8 py-12 pb-16 md:pb-20 text-white w-full">
             <article className="max-w-3xl">
               {pageData.category && (
                 <p className="text-sm text-brand-primary font-semibold mb-2 tracking-wider uppercase">{pageData.category}</p>
               )}
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 font-headline shadow-black [text-shadow:_2px_2px_4px_var(--tw-shadow-color)]">{displayTitle}</h1>
-              
               {pageData.author && (
                 <p className="text-md text-neutral-extralight/90 mb-6 font-inter">By {pageData.author}</p>
               )}
-
               {pageData.description && (
                 <div className="prose prose-lg prose-invert max-w-none text-neutral-extralight/95 font-body mb-8 [text-shadow:_1px_1px_2px_rgba(0,0,0,0.7)]">
                   {pageData.description.split('\n').map((paragraph, index) => (
@@ -360,8 +363,7 @@ export default function PublicCustomPage() {
               {!pageData.description && !pageData.author && !pageData.category && (
                    <p className="text-neutral-extralight/70 font-body mb-8">No additional content available for this page yet.</p>
               )}
-
-              <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-4 md:space-x-6">
                 <Button variant="ghost" className="text-white hover:text-brand-primary p-1 group" onClick={() => handleInteraction('like this page')}>
                   <ThumbsUp className="h-5 w-5 mr-1.5 group-hover:scale-110 transition-transform" />
                   <span className="text-sm">Like</span> 
@@ -370,6 +372,45 @@ export default function PublicCustomPage() {
                   <MessageCircle className="h-5 w-5 mr-1.5 group-hover:scale-110 transition-transform" />
                   <span className="text-sm">Comment</span>
                 </Button>
+                 <Dialog open={isDownloadModalOpen} onOpenChange={setIsDownloadModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" className="text-white hover:text-brand-primary p-1 group">
+                      <DownloadCloud className="h-5 w-5 mr-1.5 group-hover:scale-110 transition-transform" />
+                      <span className="text-sm">Download</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-neutral-medium border-neutral-light text-neutral-extralight sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle className="text-brand-primary">Download Chapters</DialogTitle>
+                      <DialogDescription>
+                        Select a chapter to download if a link is available.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="max-h-[60vh] overflow-y-auto space-y-2 pr-2">
+                      {chapters.length > 0 ? chapters.map(chapter => (
+                        <div key={chapter.id} className="flex justify-between items-center p-2 bg-neutral-light rounded-md">
+                          <span className="truncate" title={chapter.name}>{chapter.name}</span>
+                          {chapter.downloadLink ? (
+                            <Button size="sm" asChild className="bg-brand-primary hover:bg-brand-primary/80 text-white">
+                              <Link href={chapter.downloadLink} target="_blank" rel="noopener noreferrer">
+                                Download
+                              </Link>
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-neutral-extralight/60">No link</span>
+                          )}
+                        </div>
+                      )) : (
+                        <p className="text-neutral-extralight/70">No chapters available for this page.</p>
+                      )}
+                    </div>
+                     <DialogClose asChild>
+                        <Button type="button" variant="outline" className="mt-4 w-full">
+                            Close
+                        </Button>
+                    </DialogClose>
+                  </DialogContent>
+                </Dialog>
                 <div className="flex items-center text-neutral-extralight/80 p-1">
                   <Eye className="h-5 w-5 mr-1.5" />
                   <span className="text-sm">{pageData.views ?? 0} Views</span>
@@ -379,22 +420,23 @@ export default function PublicCustomPage() {
           </div>
         </section>
         
-        {/* Chapters Section */}
         {chapters.length > 0 && (
           <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-neutral-dark">
             <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-white font-headline section-title border-l-4 border-brand-primary pl-3">Chapters</h2>
             {isLoadingChapters ? (
-              <p className="text-neutral-extralight/70">Loading chapters...</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full bg-neutral-medium rounded-lg" />)}
+              </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {chapters.map(chapter => (
                   <Card 
                     key={chapter.id} 
-                    className="bg-neutral-medium border-neutral-light hover:shadow-xl transition-shadow cursor-pointer"
+                    className="bg-neutral-medium border-neutral-light hover:shadow-xl transition-shadow cursor-pointer hover:border-brand-primary/50"
                     onClick={() => openChapterViewer(chapter)}
                   >
                     <CardHeader>
-                      <CardTitle className="text-lg text-brand-primary font-semibold truncate">{chapter.name}</CardTitle>
+                      <CardTitle className="text-lg text-brand-primary font-semibold truncate" title={chapter.name}>{chapter.name}</CardTitle>
                       <CardDescription className="text-neutral-extralight/70">{chapter.imageUrls?.length || 0} Pages</CardDescription>
                     </CardHeader>
                   </Card>
@@ -407,6 +449,5 @@ export default function PublicCustomPage() {
     </div>
   );
 }
-
 
     

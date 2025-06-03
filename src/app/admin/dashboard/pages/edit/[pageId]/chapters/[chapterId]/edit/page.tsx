@@ -9,14 +9,14 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { db, serverTimestamp } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, Timestamp } from 'firebase/firestore';
+import { db, serverTimestamp, doc, getDoc, updateDoc, arrayUnion, arrayRemove, type Timestamp } from '@/lib/firebase';
 import Link from 'next/link';
 import Image from 'next/image';
 
 interface ChapterData {
   name: string;
   imageUrls: string[];
+  downloadLink?: string;
   createdAt: Timestamp;
 }
 
@@ -28,7 +28,9 @@ export default function EditChapterImagesPage() {
 
   const [chapterDetails, setChapterDetails] = useState<ChapterData | null>(null);
   const [newImageUrl, setNewImageUrl] = useState('');
+  const [downloadUrl, setDownloadUrl] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
   const fetchChapterData = async () => {
@@ -38,7 +40,9 @@ export default function EditChapterImagesPage() {
       const chapterRef = doc(db, 'customPages', pageId, 'chapters', chapterId);
       const docSnap = await getDoc(chapterRef);
       if (docSnap.exists()) {
-        setChapterDetails(docSnap.data() as ChapterData);
+        const data = docSnap.data() as ChapterData;
+        setChapterDetails(data);
+        setDownloadUrl(data.downloadLink || '');
       } else {
         toast({ title: "Error", description: "Chapter not found.", variant: "destructive" });
         router.push(`/admin/dashboard/pages/edit/${pageId}`);
@@ -52,7 +56,7 @@ export default function EditChapterImagesPage() {
 
   useEffect(() => {
     fetchChapterData();
-  }, [pageId, chapterId, toast, router]);
+  }, [pageId, chapterId]);
 
   const handleAddImage = async (e: FormEvent) => {
     e.preventDefault();
@@ -60,6 +64,7 @@ export default function EditChapterImagesPage() {
       toast({ title: "Error", description: "Image URL cannot be empty.", variant: "destructive" });
       return;
     }
+    setIsSaving(true);
     try {
       const chapterRef = doc(db, 'customPages', pageId, 'chapters', chapterId);
       await updateDoc(chapterRef, {
@@ -67,26 +72,47 @@ export default function EditChapterImagesPage() {
       });
       toast({ title: "Image Added", description: "Image added to chapter successfully." });
       setNewImageUrl('');
-      fetchChapterData(); // Refetch to show new image
+      fetchChapterData(); 
     } catch (error) {
       console.error("Error adding image to chapter: ", error);
       toast({ title: "Error", description: "Could not add image.", variant: "destructive" });
     }
+    setIsSaving(false);
   };
 
   const handleRemoveImage = async (imageUrlToRemove: string) => {
     if (!chapterDetails || !confirm("Are you sure you want to remove this image?")) return;
+    setIsSaving(true);
     try {
       const chapterRef = doc(db, 'customPages', pageId, 'chapters', chapterId);
       await updateDoc(chapterRef, {
         imageUrls: arrayRemove(imageUrlToRemove)
       });
       toast({ title: "Image Removed", description: "Image removed from chapter successfully." });
-      fetchChapterData(); // Refetch to update list
+      fetchChapterData(); 
     } catch (error) {
       console.error("Error removing image from chapter: ", error);
       toast({ title: "Error", description: "Could not remove image.", variant: "destructive" });
     }
+    setIsSaving(false);
+  };
+
+  const handleSaveDownloadLink = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!chapterDetails) return;
+    setIsSaving(true);
+    try {
+      const chapterRef = doc(db, 'customPages', pageId, 'chapters', chapterId);
+      await updateDoc(chapterRef, {
+        downloadLink: downloadUrl.trim() || null // Store null if empty
+      });
+      toast({ title: "Download Link Saved", description: "Download link updated successfully." });
+      fetchChapterData();
+    } catch (error) {
+      console.error("Error saving download link: ", error);
+      toast({ title: "Error", description: "Could not save download link.", variant: "destructive" });
+    }
+    setIsSaving(false);
   };
 
   if (isLoading || !chapterDetails) {
@@ -97,7 +123,7 @@ export default function EditChapterImagesPage() {
     <div className="space-y-6 md:space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl md:text-3xl font-bold text-white font-headline">
-          Manage Images for: <span className="text-brand-primary">{chapterDetails.name}</span>
+          Manage Chapter: <span className="text-brand-primary">{chapterDetails.name}</span>
         </h1>
         <Button variant="outline" asChild>
           <Link href={`/admin/dashboard/pages/edit/${pageId}`}>
@@ -105,6 +131,33 @@ export default function EditChapterImagesPage() {
           </Link>
         </Button>
       </div>
+
+      <Card className="bg-neutral-medium border-neutral-light">
+        <CardHeader>
+          <CardTitle className="text-lg md:text-xl text-white font-headline">Chapter Download Link</CardTitle>
+          <CardDescription className="text-neutral-extralight/80">
+            Provide an optional direct download link for this chapter.
+          </CardDescription>
+        </CardHeader>
+        <form onSubmit={handleSaveDownloadLink}>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="downloadUrl" className="text-neutral-extralight">Download URL (Optional)</Label>
+              <Input
+                id="downloadUrl"
+                type="url"
+                value={downloadUrl}
+                onChange={(e) => setDownloadUrl(e.target.value)}
+                placeholder="https://example.com/download/chapter.zip"
+                className="bg-neutral-light border-neutral-light text-neutral-extralight focus:ring-brand-primary"
+              />
+            </div>
+            <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white" disabled={isSaving}>
+              {isSaving ? 'Saving Link...' : 'Save Download Link'}
+            </Button>
+          </CardContent>
+        </form>
+      </Card>
 
       <Card className="bg-neutral-medium border-neutral-light">
         <CardHeader>
@@ -130,8 +183,8 @@ export default function EditChapterImagesPage() {
                 className="bg-neutral-light border-neutral-light text-neutral-extralight focus:ring-brand-primary"
               />
             </div>
-            <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white w-full sm:w-auto">
-              Add Image to Chapter
+            <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white" disabled={isSaving}>
+              {isSaving ? 'Adding Image...' : 'Add Image to Chapter'}
             </Button>
           </CardContent>
         </form>
@@ -141,7 +194,7 @@ export default function EditChapterImagesPage() {
         <CardHeader>
           <CardTitle className="text-lg md:text-xl text-white font-headline">Chapter Images</CardTitle>
           <CardDescription className="text-neutral-extralight/80">
-            Current images for this chapter. Drag and drop to reorder (feature coming soon).
+            Current images for this chapter.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -149,7 +202,7 @@ export default function EditChapterImagesPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {chapterDetails.imageUrls.map((url, index) => (
                 <div key={index} className="relative group bg-neutral-light p-2 rounded-md shadow">
-                  <div className="aspect-w-9 aspect-h-16"> {/* Common manga page aspect ratio */}
+                  <div className="aspect-w-9 aspect-h-16"> 
                     <Image
                       src={url}
                       alt={`Chapter image ${index + 1}`}
@@ -166,6 +219,7 @@ export default function EditChapterImagesPage() {
                     className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity bg-red-600/80 hover:bg-red-500/90"
                     onClick={() => handleRemoveImage(url)}
                     aria-label="Remove image"
+                    disabled={isSaving}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -181,3 +235,5 @@ export default function EditChapterImagesPage() {
     </div>
   );
 }
+
+    
