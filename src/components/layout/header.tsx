@@ -53,14 +53,13 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
 
   useEffect(() => {
     if (!transparentOnTop) {
-      setIsScrolled(true); // Always scrolled if not transparent on top
+      setIsScrolled(true); 
       return;
     }
 
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
     };
-    // Set initial state based on current scroll position
     handleScroll(); 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -101,16 +100,16 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
     ? [...navItemsBase, { href: '/profile/settings', label: 'Profile' }]
     : navItemsBase;
 
-  const headerBgClass = (isScrolled || !transparentOnTop) ? "bg-neutral-medium shadow-lg" : "bg-transparent";
-  const textColorClass = (isScrolled || !transparentOnTop) ? "text-neutral-extralight" : "text-white";
-  const searchBgClass = (isScrolled || !transparentOnTop) ? "bg-neutral-light" : "bg-white/20 placeholder-white/70 text-white focus:bg-white/30";
-  const searchIconColorClass = (isScrolled || !transparentOnTop) ? "text-neutral-extralight" : "text-white/80";
-  const userButtonHoverClass = (isScrolled || !transparentOnTop) ? "hover:bg-neutral-light" : "hover:bg-white/20";
+  const headerBgClass = (transparentOnTop && !isScrolled) ? "bg-transparent" : "bg-neutral-medium shadow-lg";
+  const textColorClass = (transparentOnTop && !isScrolled) ? "text-white" : "text-neutral-extralight";
+  const searchBgClass = (transparentOnTop && !isScrolled) ? "bg-white/20 placeholder-white/70 text-white focus:bg-white/30" : "bg-neutral-light text-neutral-extralight placeholder-neutral-extralight/70";
+  const searchIconColorClass = (transparentOnTop && !isScrolled) ? "text-white/80" : "text-neutral-extralight";
+  const userButtonHoverClass = (transparentOnTop && !isScrolled) ? "hover:bg-white/20" : "hover:bg-neutral-light";
 
 
   return (
     <header className={cn(
-      "sticky top-0 z-50 transition-colors duration-300",
+      "fixed top-0 left-0 right-0 z-50 transition-colors duration-300",
       headerBgClass
     )}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -144,7 +143,7 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={handleSearch}
                 className={cn(
-                  "text-neutral-extralight placeholder-neutral-extralight/70 rounded-full py-2 px-4 pl-10 focus:outline-none focus:ring-2 focus:ring-brand-primary transition duration-300 w-40 lg:w-64 h-10",
+                  "placeholder-neutral-extralight/70 rounded-full py-2 px-4 pl-10 focus:outline-none focus:ring-2 focus:ring-brand-primary transition duration-300 w-40 lg:w-64 h-10",
                   searchBgClass
                 )}
               />
@@ -156,7 +155,7 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
             </div>
             
             {isLoadingAuth ? (
-              <div className={cn("h-10 w-10 rounded-full animate-pulse", (isScrolled || !transparentOnTop) ? "bg-neutral-light" : "bg-white/20")} />
+              <div className={cn("h-10 w-10 rounded-full animate-pulse", (transparentOnTop && !isScrolled) ? "bg-white/20" : "bg-neutral-light")} />
             ) : currentUser ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
