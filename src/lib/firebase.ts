@@ -17,7 +17,8 @@ import {
   arrayUnion, 
   arrayRemove, 
   type Timestamp, 
-  limit 
+  limit,
+  documentId
 } from 'firebase/firestore';
 import { 
   getAuth, 
@@ -154,5 +155,6 @@ export {
   arrayUnion, 
   arrayRemove, 
   type Timestamp, 
-  limit 
+  limit,
+  documentId
 };

@@ -1,5 +1,8 @@
 
 import { MangaCard } from './manga-card';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 
 export interface MangaItem { // Exporting for use in pages
   id: string;
@@ -12,12 +15,22 @@ export interface MangaItem { // Exporting for use in pages
 interface MangaGridProps {
   title: string;
   mangaList: MangaItem[];
+  viewAllHref?: string;
 }
 
-export function MangaGrid({ title, mangaList }: MangaGridProps) {
+export function MangaGrid({ title, mangaList, viewAllHref }: MangaGridProps) {
   return (
     <section className="mb-12">
-      <h2 className="text-2xl sm:text-3xl font-bold mb-6 section-title text-white font-headline">{title}</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl sm:text-3xl font-bold section-title text-white font-headline">{title}</h2>
+        {viewAllHref && mangaList.length > 0 && (
+          <Button variant="outline" asChild size="sm" className="text-sm">
+            <Link href={viewAllHref}>
+              View All <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        )}
+      </div>
       {mangaList.length === 0 ? (
         <p className="text-neutral-extralight">No manga to display in this section yet.</p>
       ) : (

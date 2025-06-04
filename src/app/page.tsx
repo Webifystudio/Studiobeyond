@@ -4,6 +4,7 @@ import { Footer } from '@/components/layout/footer';
 import { HeroSection } from '@/components/manga/hero-section';
 import { MangaGrid, type MangaItem } from '@/components/manga/manga-grid';
 import { GenreGrid, type GenreItem } from '@/components/manga/genre-grid';
+import { RecentlyReadMangaGrid } from '@/components/manga/recently-read-manga-grid';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 
@@ -36,13 +37,14 @@ interface MangaDoc {
 interface GenreDoc {
   id: string;
   name: string;
+  slug: string;
   // createdAt field exists in Firestore but not strictly needed for this mapping
 }
 
 async function getHomePageData() {
   let heroItem: SliderItemDoc | null = null;
   let trendingManga: MangaItem[] = [];
-  let newReleaseManga: MangaItem[] = []; // Renamed from recentlyUpdatedManga
+  let newReleaseManga: MangaItem[] = []; 
   let genres: GenreItem[] = [];
 
   try {
@@ -99,14 +101,15 @@ async function getHomePageData() {
 
 
     // Fetch Genres (all, ordered by name for consistency)
-    const genresQuery = query(collection(db, 'genres'), orderBy('name', 'asc'));
+    // Fetch up to 10 genres
+    const genresQuery = query(collection(db, 'genres'), orderBy('name', 'asc'), limit(10));
     const genresSnapshot = await getDocs(genresQuery);
     genres = genresSnapshot.docs.map(doc => {
       const data = doc.data() as Omit<GenreDoc, 'id'>;
       return {
         id: doc.id,
         name: data.name,
-        href: `/genre/${encodeURIComponent(data.name.toLowerCase())}`,
+        href: `/genre/${encodeURIComponent(data.slug || data.name.toLowerCase().replace(/\s+/g, '-'))}`,
       };
     });
 
@@ -147,30 +150,38 @@ export default async function HomePage() {
             dataAiHint="placeholder featured"
           />
         )}
+        
+        <RecentlyReadMangaGrid />
 
         {trendingManga.length > 0 ? (
           <MangaGrid title="Trending This Week" mangaList={trendingManga} />
         ) : (
           <section className="mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-6 section-title text-white font-headline">Trending This Week</h2>
+            <div className="flex justify-between items-center mb-6">
+                 <h2 className="text-2xl sm:text-3xl font-bold section-title text-white font-headline">Trending This Week</h2>
+            </div>
             <p className="text-neutral-extralight">Trending manga will be shown here once added via the admin panel.</p>
           </section>
         )}
 
         {newReleaseManga.length > 0 ? (
-          <MangaGrid title="New Releases" mangaList={newReleaseManga} />
+          <MangaGrid title="New Releases" mangaList={newReleaseManga} viewAllHref="/latest" />
         ) : (
           <section className="mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-6 section-title text-white font-headline">New Releases</h2>
+            <div className="flex justify-between items-center mb-6">
+                 <h2 className="text-2xl sm:text-3xl font-bold section-title text-white font-headline">New Releases</h2>
+            </div>
             <p className="text-neutral-extralight">New manga releases will be shown here once added via the admin panel.</p>
           </section>
         )}
 
         {genres.length > 0 ? (
-          <GenreGrid title="Browse by Genre" genres={genres} />
+          <GenreGrid title="Browse by Genre" genres={genres} viewAllHref="/genres"/>
         ) : (
           <section className="mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-6 section-title text-white font-headline">Browse by Genre</h2>
+            <div className="flex justify-between items-center mb-6">
+                 <h2 className="text-2xl sm:text-3xl font-bold section-title text-white font-headline">Browse by Genre</h2>
+            </div>
             <p className="text-neutral-extralight">Genres will be shown here once added via the admin panel.</p>
           </section>
         )}
@@ -179,3 +190,4 @@ export default async function HomePage() {
     </div>
   );
 }
+

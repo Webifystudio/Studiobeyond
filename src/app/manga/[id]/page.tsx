@@ -11,6 +11,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, Timestamp, collection, getDocs, query, orderBy, limit, where } from 'firebase/firestore';
 import type { MangaItem as MangaCardItem } from '@/components/manga/manga-grid'; // For related manga
 import { MangaGrid } from '@/components/manga/manga-grid';
+import { RecordViewHistory } from '@/components/manga/RecordViewHistory';
 
 
 interface MangaPageProps {
@@ -50,14 +51,16 @@ async function getMangaDetails(id: string): Promise<MangaDoc | null> {
   }
 }
 
-async function getRelatedManga(currentMangaId: string, genres: string[], limitCount: number = 5): Promise<MangaCardItem[]> {
+async function getRelatedManga(currentMangaId: string, genres: string[], limitCount: number = 6): Promise<MangaCardItem[]> {
   if (!genres || genres.length === 0) return [];
   try {
+    // Use the first genre for more targeted related content, or more if needed
+    const primaryGenre = genres[0]; 
     const q = query(
       collection(db, "mangas"),
-      where("genres", "array-contains-any", genres.slice(0, 10)), 
+      where("genres", "array-contains", primaryGenre),
       orderBy("updatedAt", "desc"), 
-      limit(limitCount + 1) 
+      limit(limitCount + 1) // Fetch one extra to filter out current manga if it appears
     );
     const querySnapshot = await getDocs(q);
     const related = querySnapshot.docs
@@ -114,6 +117,7 @@ export default async function MangaDetailPage({ params }: MangaPageProps) {
 
   return (
     <div className="flex flex-col min-h-screen bg-neutral-dark">
+      <RecordViewHistory mangaId={manga.id} />
       <Header />
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
         <Button variant="outline" asChild className="mb-6">
@@ -158,7 +162,7 @@ export default async function MangaDetailPage({ params }: MangaPageProps) {
                 <h2 className="text-xl font-semibold text-white mb-2 font-headline">Genres</h2>
                 <div className="flex flex-wrap gap-2">
                   {manga.genres && manga.genres.length > 0 ? manga.genres.map(genre => (
-                    <Link key={genre} href={`/genre/${encodeURIComponent(genre.toLowerCase())}`} legacyBehavior>
+                    <Link key={genre} href={`/genre/${encodeURIComponent(genre.toLowerCase().replace(/\s+/g, '-'))}`} legacyBehavior>
                       <a className="bg-neutral-light text-neutral-extralight px-3 py-1 rounded-full text-sm font-body hover:bg-brand-primary/30 hover:text-brand-primary transition-colors">
                         {genre}
                       </a>
@@ -222,7 +226,7 @@ export default async function MangaDetailPage({ params }: MangaPageProps) {
 
 export async function generateStaticParams() {
   try {
-    const q = query(collection(db, "mangas"), orderBy("updatedAt", "desc"), limit(10)); 
+    const q = query(collection(db, "mangas"), orderBy("updatedAt", "desc"), limit(20)); // Increased limit for more pre-rendered pages
     const mangaSnapshot = await getDocs(q);
     return mangaSnapshot.docs.map((doc) => ({
       id: doc.id,
