@@ -1,8 +1,35 @@
 
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getFirestore, type Firestore, serverTimestamp as originalServerTimestamp, collection, doc, setDoc, getDoc, getDocs, updateDoc, increment, query, where, orderBy, arrayUnion, arrayRemove, type Timestamp, limit } from 'firebase/firestore';
-import { getAuth, type Auth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as firebaseSignOut, type User as FirebaseUserType } from 'firebase/auth';
-// import { getStorage, type FirebaseStorage } from 'firebase/storage'; // Add if you need Firebase Storage
+import { 
+  getFirestore, 
+  type Firestore, 
+  serverTimestamp as originalServerTimestamp, 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  getDocs, 
+  updateDoc, 
+  increment, 
+  query, 
+  where, 
+  orderBy, 
+  arrayUnion, 
+  arrayRemove, 
+  type Timestamp, 
+  limit 
+} from 'firebase/firestore';
+import { 
+  getAuth, 
+  type Auth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  onAuthStateChanged, 
+  signOut as firebaseSignOut, 
+  type User as FirebaseUserType,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword
+} from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCOPDqKGjZnsbY4zYWsJoVNVvKD-KS5H2Q",
@@ -17,7 +44,6 @@ const firebaseConfig = {
 let app: FirebaseApp;
 let db: Firestore;
 let auth: Auth;
-// let storage: FirebaseStorage;
 
 if (getApps().length === 0) {
   app = initializeApp(firebaseConfig);
@@ -28,7 +54,6 @@ if (getApps().length === 0) {
 db = getFirestore(app);
 auth = getAuth(app);
 const serverTimestamp = originalServerTimestamp;
-// storage = getStorage(app); // Initialize Storage if needed
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -36,31 +61,60 @@ const signInWithGoogle = async (): Promise<{ user: FirebaseUserType; isNewUser: 
   try {
     const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;
-    // Check if user exists in Firestore 'users' collection
     const userDocRef = doc(db, "users", user.uid);
     const userDocSnap = await getDoc(userDocRef);
-    if (!userDocSnap.exists() || !userDocSnap.data()?.username) { // Check if username is missing too
-      // New user or user without username, save/update basic info
+    if (!userDocSnap.exists() || !userDocSnap.data()?.username) {
       await setDoc(userDocRef, {
         uid: user.uid,
         email: user.email,
         displayName: user.displayName,
         photoURL: user.photoURL,
-        username: userDocSnap.exists() ? userDocSnap.data()?.username || null : null, // Preserve existing username if any, else null
-        createdAt: userDocSnap.exists() ? userDocSnap.data()?.createdAt : serverTimestamp(), // Preserve existing createdAt
+        username: userDocSnap.exists() ? userDocSnap.data()?.username || null : null,
+        createdAt: userDocSnap.exists() ? userDocSnap.data()?.createdAt : serverTimestamp(),
         updatedAt: serverTimestamp()
-      }, { merge: true }); // Use merge:true to avoid overwriting existing fields like createdAt
+      }, { merge: true });
       return { user, isNewUser: true, username: null };
     }
     return { user, isNewUser: false, username: userDocSnap.data()?.username };
   } catch (error: any) {
     if (error.code === 'auth/popup-closed-by-user') {
-      console.log("Google Sign-In: Popup closed by user."); // Informational log
-      return null; // Indicate user action, not an application error
+      console.log("Google Sign-In: Popup closed by user.");
+      return null;
     }
-    // Log other errors and re-throw them for generic error handling by the caller
     console.error("Error during Google sign-in:", error);
     throw error;
+  }
+};
+
+const createUserWithEmailAndPasswordFirebase = async (email: string, password_param: string, username_param: string): Promise<FirebaseUserType> => {
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password_param);
+    const user = userCredential.user;
+    // Create user document in Firestore
+    const userDocRef = doc(db, "users", user.uid);
+    await setDoc(userDocRef, {
+      uid: user.uid,
+      email: user.email,
+      username: username_param,
+      displayName: username_param, // Use username as displayName initially
+      photoURL: null, // No photoURL initially for email/pass users
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    return user;
+  } catch (error: any) {
+    console.error("Error creating user with email and password:", error);
+    throw error; // Re-throw for the component to handle
+  }
+};
+
+const signInWithEmailAndPasswordFirebase = async (email: string, password_param: string): Promise<FirebaseUserType> => {
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password_param);
+    return userCredential.user;
+  } catch (error: any) {
+    console.error("Error signing in with email and password:", error);
+    throw error; // Re-throw for the component to handle
   }
 };
 
@@ -73,12 +127,32 @@ const signOut = async () => {
   }
 };
 
-// Export User type from firebase/auth as FirebaseUserType if it was intended for signInWithGoogle's return type.
-// If the 'User' type used in other parts of the app (like profile pages) is distinct, that's fine.
-export { app, db, auth, serverTimestamp, signInWithGoogle, signOut, onAuthStateChanged, GoogleAuthProvider, type FirebaseUserType as User };
-// Exporting Firestore functions for direct use
-export { collection, doc, setDoc, getDoc, getDocs, updateDoc, increment, query, where, orderBy, arrayUnion, arrayRemove, type Timestamp, limit };
-
-// Note: For production applications, it's highly recommended to store your 
-// API keys and other sensitive configuration in environment variables 
-// (e.g., using a .env.local file) rather than hardcoding them directly in the source code.
+export { 
+  app, 
+  db, 
+  auth, 
+  serverTimestamp, 
+  signInWithGoogle, 
+  signOut, 
+  onAuthStateChanged, 
+  GoogleAuthProvider, 
+  createUserWithEmailAndPasswordFirebase,
+  signInWithEmailAndPasswordFirebase,
+  type FirebaseUserType as User 
+};
+export { 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  getDocs, 
+  updateDoc, 
+  increment, 
+  query, 
+  where, 
+  orderBy, 
+  arrayUnion, 
+  arrayRemove, 
+  type Timestamp, 
+  limit 
+};
