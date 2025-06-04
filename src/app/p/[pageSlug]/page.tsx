@@ -27,7 +27,7 @@ const TelegramIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 const DiscordIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 245 240" fill="currentColor" {...props}><path d="M104.4 103.9c-5.7 0-10.2 5-10.2 11.1s4.6 11.1 10.2 11.1c5.7 0 10.2-5 10.2-11.1.1-6.1-4.5-11.1-10.2-11.1zM140.9 103.9c-5.7 0-10.2 5-10.2 11.1s4.6 11.1 10.2 11.1c5.7 0 10.2-5 10.2-11.1s-4.5-11.1-10.2-11.1z"/><path d="M189.5 20h-134C44.2 20 35 29.2 35 40.6v135.2c0 11.4 9.2 20.6 20.5 20.6h113.4l-5.3-18.5 12.8 11.9 12.1 11.2 21.5 19V40.6c0-11.4-9.2-20.6-20.5-20.6zm-38.6 130.6s-3.6-4.3-6.6-8.1c13.1-3.7 18.1-11.9 18.1-11.9-4.1 2.7-8 4.6-11.5 5.9-5 2.1-9.8 3.5-14.5 4.3-9.6 1.8-18.9 1.3-27.9-.2-7.1-1.1-13.9-3.3-20.2-6.3-.6-.3-1.2-.7-1.7-1.1-1.1-.9-2.2-1.9-3.2-3.1-1.1-1.3-2.1-2.7-3-4.2h-.1c-.1-.3-.3-.7-.4-1-.1-.5-.1-1-.2-1.5l-.1-.2c0-.2.1-.3.1-.4.1-.2.1-.3.2-.4.1-.3.2-.6.3-.9.2-.5.3-.9.5-1.4.2-.7.4-1.3.6-1.9.2-.6.5-1.2.7-1.8.2-.6.4-1.1.7-1.7.2-.5.5-1.1.7-1.6.2-.5.4-1.1.6-1.6.2-.5.4-1.1.7-1.6.2-.5.4-1 .6-1.5.2-.5.4-.9.6-1.4l.2-.5.2-.5.1-.3.2-.4.1-.3c.2-.4.3-.7.5-1.1.2-.4.3-.8.5-1.2.2-.4.3-.8.5-1.1.2-.3.4-.7.6-1 .2-.4.3-.7.5-1.1.2-.4.4-.7.6-1.1.2-.4.4-.7.6-1.1.2-.4.4-.7.6-1.1l.2-.4.1-.2.1-.2.1-.2.1-.2.1-.2c.2-.3.3-.6.5-.9.2-.3.3-.6.5-.8.1-.2.2-.4.3-.5l.1-.2.1-.2c.1-.2.1-.3.2-.4.1-.2.2-.3.3-.5.1-.2.2-.3.3-.4.1-.2.2-.3.3-.5.1-.2.2-.3.3-.4.1-.2.2-.3.3-.4l.1-.2.1-.2c.2-.3.3-.5.4-.8.1-.3.2-.5.3-.7.2-.3.3-.5.4-.8.2-.3.3-.5.4-.8.1-.2.2-.4.3-.6.1-.3.2-.5.3-.7.1-.3.2-.5.3-.7.1-.3.2-.5.3-.7.1-.3.2-.5.3-.7.1-.3.2-.5.3-.7.1-.2.2-.4.3-.6.1-.2.2-.4.3-.6.1-.2.2-.4.3-.6.1-.2.2-.4.3-.6s.1-.2.2-.4.1-.2.2-.4.1-.2.2-.3.1-.2.2-.3.1-.2.2-.3.1-.2.2-.3.1-.2.2-.3c.6-1.2 1.2-2.3 1.9-3.4.2-.4.3-.7.5-1.1.2-.4.3-.7.5-1.1.2-.4.4-.7.6-1.1.2-.4.4-.7.6-1.1zm-54.5 23.1c-13.4 0-24.3-11.9-24.3-26.5s10.9-26.5 24.3-26.5c13.4 0 24.3 11.9 24.3 26.5.1 14.6-10.8 26.5-24.2 26.5z"/></svg>
+  <svg viewBox="0 0 245 240" fill="currentColor" {...props}><path d="M104.4 103.9c-5.7 0-10.2 5-10.2 11.1s4.6 11.1 10.2 11.1c5.7 0 10.2-5 10.2-11.1.1-6.1-4.5-11.1-10.2-11.1zM140.9 103.9c-5.7 0-10.2 5-10.2 11.1s4.6 11.1 10.2 11.1c5.7 0 10.2-5 10.2-11.1s-4.5-11.1-10.2-11.1z"/><path d="M189.5 20h-134C44.2 20 35 29.2 35 40.6v135.2c0 11.4 9.2 20.6 20.5 20.6h113.4l-5.3-18.5 12.8 11.9 12.1 11.2 21.5 19V40.6c0-11.4-9.2-20.6-20.5-20.6zm-38.6 130.6s-3.6-4.3-6.6-8.1c13.1-3.7 18.1-11.9 18.1-11.9-4.1 2.7-8 4.6-11.5 5.9-5 2.1-9.8 3.5-14.5 4.3-9.6 1.8-18.9 1.3-27.9-.2-7.1-1.1-13.9-3.3-20.2-6.3-.6-.3-1.2-.7-1.7-1.1-1.1-.9-2.2-1.9-3.2-3.1-1.1-1.3-2.1-2.7-3-4.2h-.1c-.1-.3-.3-.7-.4-1-.1-.5-.1-1-.2-1.5l-.1-.2c0-.2.1-.3.1-.4.1-.2.1-.3.2-.4.1-.3.2-.6.3-.9.2-.5.3-.9.5-1.4.2-.7.4-1.3.6-1.9.2-.6.5-1.2.7-1.8.2-.6.4-1.1.7-1.7.2-.5.5-1.1.7-1.6.2-.5.4-1.1.6-1.6.2-.5.4-1.1.7-1.6.2-.5.4-1 .6-1.5.2-.5.4-.9.6-1.4l.2-.5.2-.5.1-.3.2-.4.1-.3c.2-.4.3-.7.5-1.1.2-.4.3-.8.5-1.2.2-.4.3-.8.5-1.1.2-.3.4-.7.6-1 .2-.4.3-.7.5-1.1.2-.4.4-.7.6-1.1.2-.4.4-.7.6-1.1l.2-.4.1-.2.1-.2.1-.2.1-.2.1-.2c.2-.3.3-.6.5-.9.2-.3.3-.6.5-.8.1-.2.2-.4.3-.5l.1-.2.1-.2c.1-.2.1-.3.2-.4.1-.2.2-.3.3-.5.1-.2.2-.3.3-.4.1-.2.2-.3.3-.5.1-.2.2-.3.3-.4.1-.2.2-.3.3-.4l.1-.2.1-.2c.2-.3.3-.5.4-.8.1-.3.2-.5.3-.7.2-.3.3-.5.4-.8.2-.3.3-.5.4-.8.1-.2.2-.4.3-.6.1-.3.2-.5.3-.7.1-.3.2-.5.3-.7.1-.3.2-.5.3-.7.1-.3.2-.5.3-.7.1-.2.2-.4.3-.6.1-.2.2-.4.3-.6.1-.2.2-.4.3-.6.1-.2.2-.4.3-.6s.1-.2.2-.4.1-.2.2-.4.1-.2.2-.3.1-.2.2-.3.1-.2.2-.3.1-.2.2-.3c.6-1.2 1.2-2.3 1.9-3.4.2-.4.3-.7.5-1.1.2-.4.3-.7.5-1.1.2-.4.4-.7.6-1.1.2-.4.4-.7.6-1.1zm-54.5 23.1c-13.4 0-24.3-11.9-24.3-26.5s10.9-26.5 24.3-26.5c13.4 0 24.3 11.9 24.3 26.5.1 14.6-10.8 26.5-24.2 26.5z"/></svg>
 );
 
 interface CustomPageData {
@@ -40,8 +40,8 @@ interface CustomPageData {
   category?: string;
   landingImageUrl?: string;
   dataAiHint?: string;
-  views?: number;
-  likes?: number; // Added for like count
+  views: number; // Ensured it's always number
+  likes: number; 
   defaultReadingMode?: 'horizontal' | 'vertical';
   createdAt: Timestamp;
 }
@@ -90,7 +90,6 @@ export default function PublicCustomPage() {
   const [showChapterSearch, setShowChapterSearch] = useState(false);
   const [chapterSearchTerm, setChapterSearchTerm] = useState('');
 
-  // Like/Comment State
   const [hasLiked, setHasLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [isLiking, setIsLiking] = useState(false);
@@ -98,26 +97,28 @@ export default function PublicCustomPage() {
   const [newComment, setNewComment] = useState('');
   const [isPostingComment, setIsPostingComment] = useState(false);
   const [isLoadingComments, setIsLoadingComments] = useState(true);
-  const [showCommentBox, setShowCommentBox] = useState(false);
+  const [showCommentBox, setShowCommentBox] = useState(false); // For toggling comment input form
+  const [currentViewCount, setCurrentViewCount] = useState(0);
 
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
-      if (user && pageData?.id) {
-        checkIfUserLiked(user.uid, pageData.id);
-      } else {
-        setHasLiked(false);
-      }
+      // No need to call checkIfUserLiked here, it will be called after pageData is set
     });
     return () => unsubscribe();
-  }, [pageData?.id]); // Re-check like status if pageData.id changes
+  }, []); 
 
   const checkIfUserLiked = async (userId: string, pageId: string) => {
     if (!userId || !pageId) return;
     const likeRef = doc(db, 'customPages', pageId, 'likes', userId);
-    const docSnap = await getDoc(likeRef);
-    setHasLiked(docSnap.exists());
+    try {
+        const docSnap = await getDoc(likeRef);
+        setHasLiked(docSnap.exists());
+    } catch (error) {
+        console.error("Error checking if user liked:", error);
+        setHasLiked(false); // Default to false on error
+    }
   };
   
   useEffect(() => {
@@ -132,25 +133,26 @@ export default function PublicCustomPage() {
 
         if (!querySnapshot.empty) {
           const docSnap = querySnapshot.docs[0];
-          const data = { id: docSnap.id, ...docSnap.data() } as CustomPageData;
+          const data = { id: docSnap.id, ...docSnap.data(), views: docSnap.data().views || 0, likes: docSnap.data().likes || 0 } as CustomPageData;
           setPageData(data);
+          setCurrentViewCount(data.views); // Initialize view count from fetched data
           setReadingMode(data.defaultReadingMode || 'horizontal');
-          setLikeCount(data.likes || 0); // Set initial like count
+          setLikeCount(data.likes); 
 
           if (currentUser) {
             checkIfUserLiked(currentUser.uid, data.id);
           }
           fetchComments(data.id);
 
-
           const viewedKey = `viewed-page-${data.id}`;
-          if (typeof window !== 'undefined' && !sessionStorage.getItem(viewedKey)) { 
+          if (typeof window !== 'undefined' && localStorage.getItem(viewedKey) !== 'true') { 
             const pageDocRef = doc(db, 'customPages', docSnap.id);
             await updateDoc(pageDocRef, {
               views: increment(1)
             });
-            setPageData(prev => prev ? { ...prev, views: (prev.views || 0) + 1 } : null);
-            sessionStorage.setItem(viewedKey, 'true');
+            // Update local state immediately after successful DB update
+            setCurrentViewCount(prev => prev + 1); 
+            localStorage.setItem(viewedKey, 'true');
           }
           
           fetchChapters(docSnap.id);
@@ -167,7 +169,16 @@ export default function PublicCustomPage() {
     };
 
     fetchAndIncrementView();
-  }, [pageSlug, toast, currentUser]); // Add currentUser as dependency to re-fetch like status
+  }, [pageSlug, toast, currentUser]); 
+
+  useEffect(() => {
+    // This effect runs if pageData exists and currentUser is known,
+    // ensuring like status is checked after initial data load or user auth state change.
+    if (pageData?.id && currentUser?.uid) {
+        checkIfUserLiked(currentUser.uid, pageData.id);
+    }
+  }, [pageData?.id, currentUser?.uid]);
+
 
   const fetchChapters = async (currentPageId: string) => {
     if (!currentPageId) return;
@@ -194,7 +205,7 @@ export default function PublicCustomPage() {
     try {
       const commentsQuery = query(collection(db, 'customPages', pageId, 'comments'), orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(commentsQuery);
-      const commentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CommentDoc));
+      const commentsData = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as CommentDoc));
       setComments(commentsData);
     } catch (error) {
       console.error("Error fetching comments:", error);
@@ -230,9 +241,9 @@ export default function PublicCustomPage() {
         setLikeCount(prev => prev + 1);
         toast({ title: "Liked!" });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error liking/unliking page:", error);
-      toast({ title: "Error", description: "Could not update like status.", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Could not update like status.", variant: "destructive" });
     }
     setIsLiking(false);
   };
@@ -266,9 +277,9 @@ export default function PublicCustomPage() {
       setShowCommentBox(false);
       toast({ title: "Comment Posted!" });
       fetchComments(pageData.id); 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error posting comment:", error);
-      toast({ title: "Error", description: "Could not post comment.", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Could not post comment.", variant: "destructive" });
     }
     setIsPostingComment(false);
   };
@@ -307,7 +318,6 @@ export default function PublicCustomPage() {
   const openChapterViewer = (chapter: ChapterItem) => {
     setSelectedChapter(chapter);
     setCurrentImageIndex(0);
-    // setReadingMode(pageData?.defaultReadingMode || 'horizontal'); // Reading mode already set
   };
 
   const closeChapterViewer = () => {
@@ -592,24 +602,26 @@ export default function PublicCustomPage() {
                   <TooltipTrigger asChild>
                     <Button 
                         variant="ghost" 
-                        className={cn("text-white p-1.5 group rounded-full", hasLiked ? "text-brand-primary hover:text-brand-primary/80" : "hover:text-brand-primary")} 
+                        className={cn("text-white p-1.5 group rounded-full flex items-center", hasLiked ? "text-brand-primary hover:text-brand-primary/80" : "hover:text-brand-primary")} 
                         onClick={handleLike} 
                         disabled={isLiking}
-                        aria-label="Like this page"
+                        aria-label={hasLiked ? "Unlike this page" : "Like this page"}
                         aria-pressed={hasLiked}
                     >
                       <ThumbsUp className={cn("h-5 w-5 group-hover:scale-110 transition-transform", hasLiked && "fill-brand-primary")} />
+                      <span className="ml-1.5 text-xs sm:text-sm">{likeCount}</span>
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom" className="bg-neutral-medium text-neutral-extralight border-neutral-light"><p>{hasLiked ? 'Unlike' : 'Like'} ({likeCount})</p></TooltipContent>
+                  <TooltipContent side="bottom" className="bg-neutral-medium text-neutral-extralight border-neutral-light"><p>{hasLiked ? 'Unlike' : 'Like'}</p></TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" className="text-white hover:text-brand-primary p-1.5 group rounded-full" onClick={() => setShowCommentBox(!showCommentBox)} aria-label="Comment on this page">
+                    <Button variant="ghost" className="text-white hover:text-brand-primary p-1.5 group rounded-full flex items-center" onClick={() => setShowCommentBox(!showCommentBox)} aria-label="Comment on this page">
                       <MessageCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                       <span className="ml-1.5 text-xs sm:text-sm">{comments.length}</span>
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom" className="bg-neutral-medium text-neutral-extralight border-neutral-light"><p>Comment ({comments.length})</p></TooltipContent>
+                  <TooltipContent side="bottom" className="bg-neutral-medium text-neutral-extralight border-neutral-light"><p>Comment</p></TooltipContent>
                 </Tooltip>
                 
                 <Dialog open={isChapterSelectForDownloadModalOpen} onOpenChange={setIsChapterSelectForDownloadModalOpen}>
@@ -690,9 +702,9 @@ export default function PublicCustomPage() {
 
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <div className="flex items-center text-neutral-extralight/80 p-1.5 cursor-default rounded-full" aria-label={`${pageData.views ?? 0} views`}>
+                         <div className="flex items-center text-neutral-extralight/80 p-1.5 cursor-default rounded-full" aria-label={`${currentViewCount} views`}>
                             <Eye className="h-5 w-5 mr-1 sm:mr-1.5" />
-                            <span className="text-xs sm:text-sm">{pageData.views ?? 0}</span>
+                            <span className="text-xs sm:text-sm">{currentViewCount}</span>
                         </div>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="bg-neutral-medium text-neutral-extralight border-neutral-light"><p>Views</p></TooltipContent>
@@ -702,7 +714,7 @@ export default function PublicCustomPage() {
           </div>
         </section>
 
-        {/* Comment Input Section */}
+        {/* Comment Input Section - Toggled by showCommentBox */}
         {showCommentBox && (
             <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-neutral-dark">
                 <h3 className="text-xl font-semibold text-white mb-4">Leave a Comment</h3>
@@ -739,53 +751,53 @@ export default function PublicCustomPage() {
         )}
 
 
-        {/* Display Comments Section */}
-        {(comments.length > 0 || isLoadingComments) && (
-            <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-neutral-dark">
-                <h3 className="text-xl font-semibold text-white mb-4">{comments.length > 0 ? `Comments (${comments.length})` : 'Loading Comments...'}</h3>
-                {isLoadingComments && !comments.length ? (
-                    <div className="space-y-4">
-                        {[...Array(2)].map((_, i) => (
-                            <div key={i} className="flex items-start space-x-3 bg-neutral-medium p-3 rounded-lg shadow">
-                                <Skeleton className="h-10 w-10 rounded-full" />
-                                <div className="flex-1 space-y-2">
-                                    <Skeleton className="h-4 w-1/4" />
-                                    <Skeleton className="h-4 w-3/4" />
-                                </div>
+        {/* Display Comments Section - Always visible if comments exist or are loading */}
+        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-neutral-dark">
+            <h3 className="text-xl font-semibold text-white mb-4">
+                {comments.length > 0 ? `Comments (${comments.length})` : (isLoadingComments ? 'Loading Comments...' : 'Comments')}
+            </h3>
+            {isLoadingComments && !comments.length ? (
+                <div className="space-y-4">
+                    {[...Array(2)].map((_, i) => (
+                        <div key={i} className="flex items-start space-x-3 bg-neutral-medium p-3 rounded-lg shadow">
+                            <Skeleton className="h-10 w-10 rounded-full" />
+                            <div className="flex-1 space-y-2">
+                                <Skeleton className="h-4 w-1/4" />
+                                <Skeleton className="h-4 w-3/4" />
                             </div>
-                        ))}
-                    </div>
-                ) : comments.length > 0 ? (
-                    <ScrollArea className="max-h-[60vh] pr-3">
-                        <div className="space-y-4">
-                        {comments.map(comment => (
-                            <div key={comment.id} className="flex items-start space-x-3 bg-neutral-medium p-3 rounded-lg shadow">
-                                <Avatar className="h-8 w-8 sm:h-10 sm:w-10 shrink-0">
-                                    <AvatarImage src={comment.userPhotoURL || undefined} alt={comment.username} />
-                                    <AvatarFallback className="bg-neutral-light text-brand-primary text-sm">
-                                        {getInitials(comment.username)}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1">
-                                    <div className="flex items-baseline space-x-2">
-                                        <p className="text-sm font-semibold text-white">{comment.username}</p>
-                                        {comment.createdAt?.toDate && (
-                                            <p className="text-xs text-neutral-extralight/60">
-                                                {formatDistanceToNowStrict(comment.createdAt.toDate(), { addSuffix: true })}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <p className="text-sm text-neutral-extralight/90 whitespace-pre-line mt-1">{comment.text}</p>
-                                </div>
-                            </div>
-                        ))}
                         </div>
-                    </ScrollArea>
-                ) : (
-                    !isLoadingComments && <p className="text-neutral-extralight/70 p-4 bg-neutral-medium rounded-lg">No comments yet. Be the first to comment!</p>
-                )}
-            </section>
-        )}
+                    ))}
+                </div>
+            ) : comments.length > 0 ? (
+                <ScrollArea className="max-h-[60vh] pr-3">
+                    <div className="space-y-4">
+                    {comments.map(comment => (
+                        <div key={comment.id} className="flex items-start space-x-3 bg-neutral-medium p-3 rounded-lg shadow">
+                            <Avatar className="h-8 w-8 sm:h-10 sm:w-10 shrink-0">
+                                <AvatarImage src={comment.userPhotoURL || undefined} alt={comment.username} />
+                                <AvatarFallback className="bg-neutral-light text-brand-primary text-sm">
+                                    {getInitials(comment.username)}
+                                </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                                <div className="flex items-baseline space-x-2">
+                                    <p className="text-sm font-semibold text-white">{comment.username}</p>
+                                    {comment.createdAt?.toDate && (
+                                        <p className="text-xs text-neutral-extralight/60">
+                                            {formatDistanceToNowStrict(comment.createdAt.toDate(), { addSuffix: true })}
+                                        </p>
+                                    )}
+                                </div>
+                                <p className="text-sm text-neutral-extralight/90 whitespace-pre-line mt-1">{comment.text}</p>
+                            </div>
+                        </div>
+                    ))}
+                    </div>
+                </ScrollArea>
+            ) : (
+                !isLoadingComments && <p className="text-neutral-extralight/70 p-4 bg-neutral-medium rounded-lg text-center">No comments yet. Be the first to comment!</p>
+            )}
+        </section>
         
         {(filteredChapters.length > 0 || chapterSearchTerm || isLoadingChapters) && (
           <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-neutral-dark">
@@ -830,3 +842,4 @@ export default function PublicCustomPage() {
     </TooltipProvider>
   );
 }
+
