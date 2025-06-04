@@ -23,8 +23,6 @@ import {
 const navItemsBase = [
   { href: '/', label: 'Home' },
   { href: '/browse', label: 'Browse' },
-  // { href: '/genres', label: 'Genres' }, // Removed
-  // { href: '/latest', label: 'Latest Updates' }, // Removed
   { href: '/popular', label: 'Popular' },
 ];
 
@@ -54,11 +52,16 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
   }, [pathname]);
 
   useEffect(() => {
-    if (!transparentOnTop) return;
+    if (!transparentOnTop) {
+      setIsScrolled(true); // Always scrolled if not transparent on top
+      return;
+    }
 
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
     };
+    // Set initial state based on current scroll position
+    handleScroll(); 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [transparentOnTop]);
@@ -98,15 +101,21 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
     ? [...navItemsBase, { href: '/profile/settings', label: 'Profile' }]
     : navItemsBase;
 
+  const headerBgClass = (isScrolled || !transparentOnTop) ? "bg-neutral-medium shadow-lg" : "bg-transparent";
+  const textColorClass = (isScrolled || !transparentOnTop) ? "text-neutral-extralight" : "text-white";
+  const searchBgClass = (isScrolled || !transparentOnTop) ? "bg-neutral-light" : "bg-white/20 placeholder-white/70 text-white focus:bg-white/30";
+  const searchIconColorClass = (isScrolled || !transparentOnTop) ? "text-neutral-extralight" : "text-white/80";
+  const userButtonHoverClass = (isScrolled || !transparentOnTop) ? "hover:bg-neutral-light" : "hover:bg-white/20";
+
+
   return (
     <header className={cn(
       "sticky top-0 z-50 transition-colors duration-300",
-      isScrolled ? "bg-neutral-medium shadow-lg" : "bg-transparent",
-      !transparentOnTop && "bg-neutral-medium shadow-lg" // Ensure non-transparent headers always have bg
+      headerBgClass
     )}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
-          <Link href="/" className="text-3xl font-bold text-brand-primary font-inter">
+          <Link href="/" className={cn("text-3xl font-bold text-brand-primary font-inter whitespace-nowrap", textColorClass)}>
             BEYOND SCANS
           </Link>
 
@@ -117,7 +126,7 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
                 href={item.href}
                 className={cn(
                   "hover:text-brand-primary transition duration-300 font-inter",
-                  isScrolled || !transparentOnTop ? "text-neutral-extralight" : "text-white", // Adjust text color based on background
+                  textColorClass, 
                   pathname === item.href && "text-brand-primary"
                 )}
               >
@@ -136,22 +145,22 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
                 onKeyDown={handleSearch}
                 className={cn(
                   "text-neutral-extralight placeholder-neutral-extralight/70 rounded-full py-2 px-4 pl-10 focus:outline-none focus:ring-2 focus:ring-brand-primary transition duration-300 w-40 lg:w-64 h-10",
-                  isScrolled || !transparentOnTop ? "bg-neutral-light" : "bg-white/20 placeholder-white/70 text-white focus:bg-white/30"
+                  searchBgClass
                 )}
               />
               <Search className={cn(
                 "w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none",
-                 isScrolled || !transparentOnTop ? "text-neutral-extralight" : "text-white/80"
+                 searchIconColorClass
                 )} 
               />
             </div>
             
             {isLoadingAuth ? (
-              <div className={cn("h-10 w-10 rounded-full animate-pulse", isScrolled || !transparentOnTop ? "bg-neutral-light" : "bg-white/20")} />
+              <div className={cn("h-10 w-10 rounded-full animate-pulse", (isScrolled || !transparentOnTop) ? "bg-neutral-light" : "bg-white/20")} />
             ) : currentUser ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className={cn("relative h-9 w-9 rounded-full p-0", isScrolled || !transparentOnTop ? "hover:bg-neutral-light" : "hover:bg-white/20")}>
+                  <Button variant="ghost" className={cn("relative h-9 w-9 rounded-full p-0", userButtonHoverClass)}>
                     <Avatar className="h-9 w-9">
                       <AvatarImage src={currentUser.photoURL || undefined} alt={currentUser.displayName || "User"} />
                       <AvatarFallback className="bg-brand-primary text-white">
@@ -183,7 +192,9 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
               </DropdownMenu>
             ) : (
               <Button variant="ghost" size="sm" asChild className={cn(
-                isScrolled || !transparentOnTop ? "text-neutral-extralight hover:text-brand-primary hover:bg-neutral-light" : "text-white hover:text-brand-primary hover:bg-white/20"
+                "hover:text-brand-primary",
+                textColorClass,
+                userButtonHoverClass
                 )}>
                 <Link href="/login">
                   <LogIn className="mr-2 h-4 w-4" /> Login
@@ -194,8 +205,9 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild className="md:hidden">
                 <Button variant="ghost" size="icon" aria-label="Open menu" className={cn(
-                  "rounded-full p-0",
-                   isScrolled || !transparentOnTop ? "text-neutral-extralight hover:text-brand-primary hover:bg-neutral-light" : "text-white hover:text-brand-primary hover:bg-white/20"
+                  "rounded-full p-0 hover:text-brand-primary",
+                   textColorClass,
+                   userButtonHoverClass
                   )}>
                   {isMobileMenuOpen ? <X className="w-7 h-7" /> : <MenuIcon className="w-7 h-7" />}
                 </Button>
@@ -211,7 +223,7 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
               >
                 <div className="p-4 pt-6">
                    <div className="flex justify-between items-center mb-6 px-2">
-                        <Link href="/" className="text-2xl font-bold text-brand-primary font-inter" onClick={() => setIsMobileMenuOpen(false)}>
+                        <Link href="/" className="text-2xl font-bold text-brand-primary font-inter whitespace-nowrap" onClick={() => setIsMobileMenuOpen(false)}>
                             BEYOND SCANS
                         </Link>
                         <SheetClose asChild>
