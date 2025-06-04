@@ -10,11 +10,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { auth, db, doc, getDoc, updateDoc, updateAuthProfile, type User } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, UploadCloud, Palette } from 'lucide-react';
+import { ArrowLeft, UploadCloud, Palette, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from '@/context/ThemeContext';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; // For horizontal scrolling
 
 const IMGBB_API_KEY = "2bb2346a6a907388d8a3b0beac2bca86";
 
@@ -162,7 +163,7 @@ export default function ProfileSettingsPage() {
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
           </Link>
         </Button>
-        <Card className="w-full max-w-2xl mx-auto bg-card border-border shadow-xl">
+        <Card className="w-full max-w-3xl mx-auto bg-card border-border shadow-xl">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold text-primary font-headline">Profile Settings</CardTitle>
             <CardDescription className="text-muted-foreground pt-2">
@@ -170,8 +171,7 @@ export default function ProfileSettingsPage() {
             </CardDescription>
           </CardHeader>
           
-          <CardContent className="space-y-8">
-            {/* Profile Details Section */}
+          <CardContent className="space-y-10">
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-4 font-headline">Account Information</h2>
               <div className="flex flex-col items-center space-y-3 mb-6">
@@ -238,34 +238,66 @@ export default function ProfileSettingsPage() {
 
             <Separator className="my-8 bg-border" />
 
-            {/* Theme Selection Section */}
             <section>
-              <h2 className="text-xl font-semibold text-foreground mb-6 font-headline flex items-center">
+              <h2 className="text-xl font-semibold text-foreground mb-1 font-headline flex items-center">
                 <Palette className="mr-3 h-6 w-6 text-primary" /> Application Theme
               </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {availableThemes.map((themeOption) => (
-                  <Button
-                    key={themeOption.id}
-                    variant="outline"
-                    className={cn(
-                      "h-auto p-4 border-2 rounded-lg flex flex-col items-start space-y-2 transition-all",
-                      activeTheme.id === themeOption.id ? 'border-primary ring-2 ring-primary' : 'border-border hover:border-muted-foreground/70'
-                    )}
-                    onClick={() => setThemeById(themeOption.id)}
-                  >
-                    <span className="font-semibold text-foreground">{themeOption.name}</span>
-                    <div className="flex space-x-1 w-full">
-                      <div className="h-5 w-1/3 rounded" style={{ backgroundColor: `hsl(${themeOption.colors.primary})` }}></div>
-                      <div className="h-5 w-1/3 rounded" style={{ backgroundColor: `hsl(${themeOption.colors.accent})` }}></div>
-                      <div className="h-5 w-1/3 rounded" style={{ backgroundColor: `hsl(${themeOption.colors.card})` }}></div>
+              <p className="text-sm text-muted-foreground mb-6">Select a theme to change the application's appearance.</p>
+              
+              <ScrollArea className="w-full whitespace-nowrap rounded-md">
+                <div className="flex space-x-4 p-1 pb-4">
+                  {availableThemes.map((themeOption) => (
+                    <div
+                      key={themeOption.id}
+                      onClick={() => setThemeById(themeOption.id)}
+                      className={cn(
+                        "group relative w-48 h-64 shrink-0 rounded-lg border-2 p-3 flex flex-col justify-between cursor-pointer transition-all duration-200 ease-in-out overflow-hidden focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-ring",
+                        activeTheme.id === themeOption.id ? 'border-primary ring-2 ring-primary shadow-lg' : 'border-border hover:border-muted-foreground/70 hover:shadow-md'
+                      )}
+                      style={{
+                        background: themeOption.backgroundGradient || `hsl(${themeOption.colors.background})`,
+                        color: `hsl(${themeOption.colors.foreground})`,
+                        fontFamily: themeOption.fontFamilyBody || 'Inter, sans-serif'
+                      }}
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setThemeById(themeOption.id); }}
+                    >
+                      <div className="flex-grow">
+                        <h3 
+                          className="text-lg font-semibold mb-2 truncate"
+                          style={{ fontFamily: themeOption.fontFamilyHeadline || 'Inter, sans-serif', color: `hsl(${themeOption.colors.primary})` }}
+                        >
+                          {themeOption.name}
+                        </h3>
+                        <p className="text-xs mb-1" style={{ fontFamily: themeOption.fontFamilyHeadline || 'Inter, sans-serif' }}>Headline: Aa Bb Cc</p>
+                        <p className="text-xs" style={{ fontFamily: themeOption.fontFamilyBody || 'Inter, sans-serif' }}>Body: Lorem ipsum dolor sit.</p>
+                      </div>
+
+                      <div className="mt-auto space-y-1">
+                         <div className="flex items-center space-x-1">
+                            <div className="w-3 h-3 rounded-full border border-border" style={{ backgroundColor: `hsl(${themeOption.colors.primary})` }}></div>
+                            <span className="text-xs opacity-80">Primary</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                            <div className="w-3 h-3 rounded-full border border-border" style={{ backgroundColor: `hsl(${themeOption.colors.accent})` }}></div>
+                            <span className="text-xs opacity-80">Accent</span>
+                        </div>
+                         <div className="flex items-center space-x-1">
+                            <div className="w-3 h-3 rounded-full border border-border" style={{ backgroundColor: `hsl(${themeOption.colors.card})` }}></div>
+                            <span className="text-xs opacity-80">Card</span>
+                        </div>
+                      </div>
+
+                      {activeTheme.id === themeOption.id && (
+                        <div className="absolute top-2 right-2 p-1 bg-primary/80 text-primary-foreground rounded-full">
+                          <CheckCircle className="h-4 w-4" />
+                        </div>
+                      )}
                     </div>
-                     <div className="text-xs text-muted-foreground w-full text-left">
-                        BG: <span style={{color: `hsl(${themeOption.colors.background})`}}>●</span> FG: <span style={{color: `hsl(${themeOption.colors.foreground})`}}>●</span>
-                    </div>
-                  </Button>
-                ))}
-              </div>
+                  ))}
+                </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
             </section>
 
           </CardContent>
@@ -274,3 +306,5 @@ export default function ProfileSettingsPage() {
     </div>
   );
 }
+
+    

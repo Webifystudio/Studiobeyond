@@ -1,3 +1,4 @@
+
 import type {Config} from 'tailwindcss';
 
 export default {
@@ -10,9 +11,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['Inter', 'sans-serif'],
-        headline: ['Inter', 'sans-serif'],
-        inter: ['Inter', 'sans-serif'], // Added for direct use if needed
+        body: ['var(--font-family-body)', 'Inter', 'sans-serif'],
+        headline: ['var(--font-family-headline)', 'Inter', 'sans-serif'],
+        inter: ['Inter', 'sans-serif'], 
         code: ['monospace'],
       },
       colors: {
@@ -56,21 +57,20 @@ export default {
           '4': 'hsl(var(--chart-4))',
           '5': 'hsl(var(--chart-5))',
         },
-        // Custom colors from HTML, matching keys for easier reference
-        'brand-primary': 'hsl(var(--primary))', // #FF6B6B
-        'brand-secondary': '#4ECDC4', // For specific hovers like genre cards
-        'neutral-dark': 'hsl(var(--background))', // #1A202C / #1D232A
-        'neutral-medium': 'hsl(var(--card))', // #2D3748
-        'neutral-light': 'hsl(var(--secondary))', // #4A5568
-        'neutral-extralight': 'hsl(var(--foreground))', // #A0AEC0
+        'brand-primary': 'hsl(var(--primary))', 
+        'brand-secondary': '#4ECDC4', 
+        'neutral-dark': 'hsl(var(--background))', 
+        'neutral-medium': 'hsl(var(--card))', 
+        'neutral-light': 'hsl(var(--secondary))', 
+        'neutral-extralight': 'hsl(var(--foreground))', 
       },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
-        'xl': '1rem', // 16px
-        '2xl': '1.5rem', // 24px
-        '3xl': '2rem', // 32px
+        'xl': '1rem', 
+        '2xl': '1.5rem', 
+        '3xl': '2rem', 
       },
       keyframes: {
         'accordion-down': {
@@ -98,3 +98,5 @@ export default {
   },
   plugins: [require('tailwindcss-animate')],
 } satisfies Config;
+
+    

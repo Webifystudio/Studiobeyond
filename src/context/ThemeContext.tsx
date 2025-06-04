@@ -18,14 +18,32 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
   const applyTheme = useCallback((themeToApply: Theme) => {
     const root = window.document.documentElement;
-    root.classList.remove(...themes.map(t => t.id)); // Remove any existing theme classes
-    root.classList.add(themeToApply.id); // Add new theme class (optional, for CSS targeting)
+    
+    // Remove any existing theme ID classes if needed (currently not using id class for styling)
+    // themes.forEach(t => root.classList.remove(t.id));
+    // root.classList.add(themeToApply.id);
 
-    // Set CSS variables
+
+    // Set CSS variables for colors
     Object.entries(themeToApply.colors).forEach(([key, value]) => {
       const cssVarName = `--${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
       root.style.setProperty(cssVarName, value);
     });
+
+    // Set CSS variables for fonts
+    root.style.setProperty('--font-family-body', themeToApply.fontFamilyBody || "'Inter', sans-serif");
+    root.style.setProperty('--font-family-headline', themeToApply.fontFamilyHeadline || "'Inter', sans-serif");
+
+    // Set CSS variable for background gradient
+    if (themeToApply.backgroundGradient) {
+      root.style.setProperty('--background-gradient', themeToApply.backgroundGradient);
+    } else {
+      // Fallback or remove if no gradient
+      root.style.removeProperty('--background-gradient'); 
+      // Ensure --background solid color is primary if gradient is removed
+      // This is handled by body { background: var(--background-gradient, var(--background)) } in CSS
+    }
+
     setCurrentTheme(themeToApply);
   }, []);
 
@@ -57,3 +75,5 @@ export const useTheme = () => {
   }
   return context;
 };
+
+    

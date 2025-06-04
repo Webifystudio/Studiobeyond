@@ -3,7 +3,7 @@ export interface Theme {
   name: string;
   id: string;
   colors: {
-    background: string;
+    background: string; // HSL string e.g., "216 15% 15%"
     foreground: string;
     card: string;
     cardForeground: string;
@@ -23,6 +23,9 @@ export interface Theme {
     input: string;
     ring: string;
   };
+  fontFamilyBody?: string; // e.g., "'Roboto', sans-serif"
+  fontFamilyHeadline?: string; // e.g., "'Audiowide', cursive"
+  backgroundGradient?: string; // e.g., "linear-gradient(to bottom right, hsl(260 50% 5%), hsl(240 60% 15%))"
 }
 
 export const themes: Theme[] = [
@@ -50,6 +53,8 @@ export const themes: Theme[] = [
       input: "215 15% 35%",
       ring: "0 100% 71%",
     },
+    fontFamilyBody: "'Inter', sans-serif",
+    fontFamilyHeadline: "'Inter', sans-serif",
   },
   {
     name: "Light Mode",
@@ -67,7 +72,7 @@ export const themes: Theme[] = [
       secondaryForeground: "222.2 47.4% 11.2%", // #1C1917
       muted: "0 0% 96.1%",
       mutedForeground: "215.4 16.3% 46.9%", // #78716C
-      accent: "262.1 83.3% 57.8%", // Similar to primary for this theme
+      accent: "32 95% 60%", // Orange accent
       accentForeground: "0 0% 98%",
       destructive: "0 84.2% 60.2%",
       destructiveForeground: "0 0% 98%",
@@ -75,55 +80,187 @@ export const themes: Theme[] = [
       input: "0 0% 89.8%",
       ring: "262.1 83.3% 57.8%",
     },
+    fontFamilyBody: "'Open Sans', sans-serif",
+    fontFamilyHeadline: "'Raleway', sans-serif",
   },
   {
-    name: "Oceanic Blue",
-    id: "oceanic-blue",
+    name: "Cyberpunk Glow",
+    id: "cyberpunk-glow",
     colors: {
-      background: "205 50% 18%", // Dark Blue
-      foreground: "200 15% 85%", // Light Cyan/Gray
-      card: "205 45% 25%",
-      cardForeground: "200 15% 85%",
-      popover: "205 45% 25%",
-      popoverForeground: "200 15% 85%",
-      primary: "180 100% 35%", // Teal
+      background: "260 30% 8%", 
+      foreground: "180 100% 85%",
+      card: "260 30% 12%",
+      cardForeground: "180 100% 85%",
+      popover: "260 30% 12%",
+      popoverForeground: "180 100% 85%",
+      primary: "320 100% 60%", // Hot Pink
       primaryForeground: "0 0% 100%",
-      secondary: "205 30% 40%",
-      secondaryForeground: "200 15% 85%",
-      muted: "205 30% 30%",
-      mutedForeground: "200 15% 65%",
-      accent: "190 100% 50%", // Bright Cyan
-      accentForeground: "205 50% 10%",
+      secondary: "260 25% 20%",
+      secondaryForeground: "180 100% 85%",
+      muted: "260 25% 15%",
+      mutedForeground: "180 80% 60%",
+      accent: "60 100% 55%", // Bright Yellow
+      accentForeground: "260 30% 5%",
+      destructive: "0 100% 55%",
+      destructiveForeground: "0 0% 100%",
+      border: "260 20% 25%",
+      input: "260 20% 25%",
+      ring: "320 100% 60%",
+    },
+    fontFamilyBody: "'Roboto Mono', monospace",
+    fontFamilyHeadline: "'Audiowide', cursive",
+    backgroundGradient: "linear-gradient(135deg, hsl(260 50% 10%), hsl(230 40% 5%))",
+  },
+  {
+    name: "Sakura Dream",
+    id: "sakura-dream",
+    colors: {
+      background: "340 100% 98%",
+      foreground: "330 30% 30%",
+      card: "0 0% 100%",
+      cardForeground: "330 30% 30%",
+      popover: "0 0% 100%",
+      popoverForeground: "330 30% 30%",
+      primary: "340 90% 70%", // Cherry Blossom Pink
+      primaryForeground: "330 30% 20%",
+      secondary: "340 80% 92%",
+      secondaryForeground: "330 30% 40%",
+      muted: "340 70% 90%",
+      mutedForeground: "330 25% 50%",
+      accent: "40 100% 75%", // Pale Gold
+      accentForeground: "30 50% 25%",
+      destructive: "0 80% 65%",
+      destructiveForeground: "0 0% 100%",
+      border: "340 60% 88%",
+      input: "340 60% 88%",
+      ring: "340 90% 70%",
+    },
+    fontFamilyBody: "'Noto Serif JP', serif",
+    fontFamilyHeadline: "'Dancing Script', cursive",
+    backgroundGradient: "radial-gradient(ellipse at top left, hsl(340 100% 97%), hsl(0 0% 100%))",
+  },
+  {
+    name: "Oceanic Depths",
+    id: "oceanic-depths", // Was oceanic-blue
+    colors: {
+      background: "205 60% 12%", // Darker Blue
+      foreground: "190 25% 90%", // Lighter Cyan/Gray
+      card: "205 50% 18%",
+      cardForeground: "190 25% 90%",
+      popover: "205 50% 18%",
+      popoverForeground: "190 25% 90%",
+      primary: "180 100% 40%", // Teal
+      primaryForeground: "0 0% 100%",
+      secondary: "205 40% 28%",
+      secondaryForeground: "190 25% 90%",
+      muted: "205 40% 22%",
+      mutedForeground: "190 20% 70%",
+      accent: "170 100% 50%", // Bright Sea Green
+      accentForeground: "205 60% 8%",
+      destructive: "0 70% 55%",
+      destructiveForeground: "0 0% 100%",
+      border: "205 40% 28%",
+      input: "205 40% 28%",
+      ring: "180 100% 40%",
+    },
+    fontFamilyBody: "'Open Sans', sans-serif",
+    fontFamilyHeadline: "'Raleway', sans-serif",
+    backgroundGradient: "linear-gradient(to bottom, hsl(205 60% 8%), hsl(210 70% 15%))",
+  },
+  {
+    name: "Forest Whisper",
+    id: "forest-whisper", // Was forest-green
+    colors: {
+      background: "120 30% 10%", // Darker Forest Green
+      foreground: "90 15% 85%", // Light Moss Green
+      card: "120 25% 15%",
+      cardForeground: "90 15% 85%",
+      popover: "120 25% 15%",
+      popoverForeground: "90 15% 85%",
+      primary: "90 65% 40%", // Rich Leaf Green
+      primaryForeground: "0 0% 100%",
+      secondary: "120 20% 25%",
+      secondaryForeground: "90 15% 85%",
+      muted: "120 20% 20%",
+      mutedForeground: "90 10% 65%",
+      accent: "45 75% 55%", // Goldenrod
+      accentForeground: "120 30% 5%",
+      destructive: "15 70% 50%",
+      destructiveForeground: "0 0% 100%",
+      border: "120 20% 25%",
+      input: "120 20% 25%",
+      ring: "90 65% 40%",
+    },
+    fontFamilyBody: "'Lato', sans-serif",
+    fontFamilyHeadline: "'Merriweather', serif",
+  },
+  {
+    name: "Crimson Night",
+    id: "crimson-night",
+    colors: {
+      background: "0 10% 8%",
+      foreground: "0 5% 80%",
+      card: "0 10% 12%",
+      cardForeground: "0 5% 80%",
+      popover: "0 10% 12%",
+      popoverForeground: "0 5% 80%",
+      primary: "0 70% 50%", // Deep Crimson
+      primaryForeground: "0 0% 100%",
+      secondary: "0 8% 20%",
+      secondaryForeground: "0 5% 80%",
+      muted: "0 8% 15%",
+      mutedForeground: "0 5% 60%",
+      accent: "30 80% 55%", // Dark Orange
+      accentForeground: "0 0% 100%",
       destructive: "0 70% 50%",
       destructiveForeground: "0 0% 100%",
-      border: "205 30% 40%",
-      input: "205 30% 40%",
-      ring: "180 100% 35%",
+      border: "0 8% 20%",
+      input: "0 8% 20%",
+      ring: "0 70% 50%",
     },
+    fontFamilyBody: "'Inter', sans-serif",
+    fontFamilyHeadline: "'Cinzel', serif", // Needs to be added to layout
   },
   {
-    name: "Forest Green",
-    id: "forest-green",
+    name: "Monochrome Cool",
+    id: "monochrome-cool",
     colors: {
-      background: "120 25% 15%", // Dark Green
-      foreground: "100 10% 80%", // Light Beige
-      card: "120 20% 22%",
-      cardForeground: "100 10% 80%",
-      popover: "120 20% 22%",
-      popoverForeground: "100 10% 80%",
-      primary: "90 60% 45%", // Olive Green
+      background: "210 10% 96%",
+      foreground: "220 10% 20%",
+      card: "0 0% 100%",
+      cardForeground: "220 10% 20%",
+      popover: "0 0% 100%",
+      popoverForeground: "220 10% 20%",
+      primary: "220 20% 40%", // Cool Grey-Blue
       primaryForeground: "0 0% 100%",
-      secondary: "120 15% 35%",
-      secondaryForeground: "100 10% 80%",
-      muted: "120 15% 30%",
-      mutedForeground: "100 10% 60%",
-      accent: "70 70% 55%", // Brighter Yellow-Green
-      accentForeground: "120 25% 10%",
+      secondary: "210 10% 90%",
+      secondaryForeground: "220 10% 30%",
+      muted: "210 10% 85%",
+      mutedForeground: "220 10% 50%",
+      accent: "200 30% 50%", // Slightly brighter blue
+      accentForeground: "0 0% 100%",
       destructive: "0 60% 50%",
       destructiveForeground: "0 0% 100%",
-      border: "120 15% 35%",
-      input: "120 15% 35%",
-      ring: "90 60% 45%",
+      border: "210 10% 85%",
+      input: "210 10% 85%",
+      ring: "220 20% 40%",
     },
+    fontFamilyBody: "'Inter', sans-serif",
+    fontFamilyHeadline: "'Inter', sans-serif",
   },
 ];
+
+// Function to convert HSL string to HSL object for easier manipulation if needed
+export const parseHsl = (hslStr: string): { h: number, s: number, l: number } | null => {
+  const match = hslStr.match(/(\d+)\s*(\d+)%\s*(\d+)%/);
+  if (match) {
+    return {
+      h: parseInt(match[1], 10),
+      s: parseInt(match[2], 10),
+      l: parseInt(match[3], 10),
+    };
+  }
+  return null;
+};
+
+    
