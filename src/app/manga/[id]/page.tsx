@@ -1,8 +1,8 @@
 
-"use client"; // Make this a client component for like/comment/view states
+"use client"; 
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } // useRouter for login redirect
+import { useParams, useRouter } 
 from 'next/navigation';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
@@ -14,16 +14,14 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ArrowLeft, ExternalLink, ThumbsUp, MessageCircle, Send, Eye } from 'lucide-react';
-import { db, auth, onAuthStateChanged, type User as FirebaseUser, doc, getDoc, Timestamp, collection, getDocs, query, orderBy, limit, where, setDoc, serverTimestamp, increment, updateDoc, deleteDoc } from '@/lib/firebase';
+import { db, auth, onAuthStateChanged, type User as FirebaseUser, doc, getDoc, Timestamp, collection, getDocs, query, orderBy, limit, where, setDoc, serverTimestamp, increment, updateDoc, deleteDoc, addDoc } from '@/lib/firebase';
 import type { MangaItem as MangaCardItem } from '@/components/manga/manga-grid';
 import { MangaGrid } from '@/components/manga/manga-grid';
-import { RecordViewHistory } from '@/components/manga/RecordViewHistory'; // For recently read
+import { RecordViewHistory } from '@/components/manga/RecordViewHistory';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
-
-interface MangaPageProps {
-  params: { id: string };
-}
+import { cn } from '@/lib/utils';
+import { formatDistanceToNowStrict } from 'date-fns';
 
 interface MangaDoc {
   id: string;
@@ -33,13 +31,13 @@ interface MangaDoc {
   dataAiHint?: string;
   chapters: number;
   status: string;
-  // genres: string[]; // Genres removed from display
   reviews?: string[]; 
   externalReadLink?: string; 
+  genres?: string[]; // Kept for related manga logic, even if not displayed directly
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  views?: number; // For view count
-  likes?: number; // For like count (denormalized)
+  views?: number; 
+  likes?: number; 
 }
 
 interface CommentDoc {
@@ -77,10 +75,21 @@ export default function MangaDetailPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
+      if (user && mangaId) { // Check for mangaId as well before fetching like status
+        checkIfUserLiked(user.uid, mangaId);
+      } else {
+        setHasLiked(false); // Reset if user logs out or mangaId changes
+      }
     });
     return () => unsubscribe();
-  }, []);
+  }, [mangaId]); // Add mangaId dependency
   
+  const checkIfUserLiked = async (userId: string, currentMangaId: string) => {
+    const likeRef = doc(db, 'mangas', currentMangaId, 'likes', userId);
+    const docSnap = await getDoc(likeRef);
+    setHasLiked(docSnap.exists());
+  };
+
   useEffect(() => {
     if (!mangaId) return;
 
@@ -96,14 +105,17 @@ export default function MangaDetailPage() {
           setViewCount(mangaData.views || 0);
           setLikeCount(mangaData.likes || 0);
 
-          // Fetch related manga (simplified, based on first genre if exists or just general popular)
+          if (currentUser) {
+            checkIfUserLiked(currentUser.uid, mangaId);
+          }
+
           if (mangaData.genres && mangaData.genres.length > 0) {
              const primaryGenre = mangaData.genres[0];
              const qRelated = query(
                 collection(db, "mangas"),
                 where("genres", "array-contains", primaryGenre),
-                where("__name__", "!=", mangaId), // Exclude current manga
-                orderBy("__name__"), // Need another orderBy for inequality
+                where("__name__", "!=", mangaId), 
+                orderBy("__name__"), 
                 limit(6)
             );
             const relatedSnapshot = await getDocs(qRelated);
@@ -119,7 +131,6 @@ export default function MangaDetailPage() {
             });
             setRelatedManga(relatedList);
           } else {
-            // Fallback: fetch some popular/recent manga if no genres
             const qFallback = query(collection(db, "mangas"), where("__name__", "!=", mangaId), orderBy("updatedAt", "desc"), limit(6));
             const fallbackSnapshot = await getDocs(qFallback);
             const fallbackList = fallbackSnapshot.docs.map(docSnap => {
@@ -135,8 +146,6 @@ export default function MangaDetailPage() {
             setRelatedManga(fallbackList);
           }
 
-
-          // Summarize reviews
           const reviewsToSummarize = mangaData.reviews && mangaData.reviews.length > 0 ? mangaData.reviews : ["No user reviews available for this manga yet."];
           try {
             const summary = await summarizeReviews({ reviews: reviewsToSummarize, mangaTitle: mangaData.title });
@@ -145,9 +154,8 @@ export default function MangaDetailPage() {
             console.error("Failed to summarize reviews:", error);
           }
 
-          // Increment view count
           const viewedKey = `viewed-manga-${mangaId}`;
-          if (typeof window !== 'undefined' && !sessionStorage.getItem(viewedKey)) { // Use sessionStorage for per-session view
+          if (typeof window !== 'undefined' && !sessionStorage.getItem(viewedKey)) { 
             await updateDoc(mangaRef, { views: increment(1) });
             setViewCount((prev) => prev + 1);
             sessionStorage.setItem(viewedKey, 'true');
@@ -160,25 +168,15 @@ export default function MangaDetailPage() {
       } catch (error) {
         console.error("Error fetching manga details: ", error);
         setManga(null);
+        toast({ title: "Error", description: "Could not load manga details.", variant: "destructive"});
       }
       setIsLoading(false);
     };
 
     fetchMangaData();
     fetchComments();
-  }, [mangaId]);
+  }, [mangaId, currentUser]); // Re-fetch manga data if currentUser changes (to update like status early)
 
-
-  useEffect(() => {
-    if (currentUser && mangaId) {
-      const likeRef = doc(db, 'mangas', mangaId, 'likes', currentUser.uid);
-      getDoc(likeRef).then(docSnap => {
-        if (docSnap.exists()) {
-          setHasLiked(true);
-        }
-      });
-    }
-  }, [currentUser, mangaId]);
 
   const fetchComments = async () => {
     if (!mangaId) return;
@@ -190,6 +188,7 @@ export default function MangaDetailPage() {
       setComments(commentsData);
     } catch (error) {
       console.error("Error fetching comments:", error);
+      toast({ title: "Error", description: "Could not load comments.", variant: "destructive"});
     }
     setIsLoadingComments(false);
   };
@@ -208,14 +207,12 @@ export default function MangaDetailPage() {
 
     try {
       if (hasLiked) {
-        // Unlike
         await deleteDoc(likeRef);
         await updateDoc(mangaRef, { likes: increment(-1) });
         setHasLiked(false);
-        setLikeCount(prev => prev - 1);
+        setLikeCount(prev => Math.max(0, prev - 1)); // Ensure count doesn't go below 0
         toast({ title: "Unliked!" });
       } else {
-        // Like
         await setDoc(likeRef, { userId: currentUser.uid, createdAt: serverTimestamp() });
         await updateDoc(mangaRef, { likes: increment(1) });
         setHasLiked(true);
@@ -240,24 +237,23 @@ export default function MangaDetailPage() {
     setIsPostingComment(true);
 
     try {
-      // Fetch current user's username from 'users' collection
       const userDocRef = doc(db, "users", currentUser.uid);
       const userDocSnap = await getDoc(userDocRef);
       const username = userDocSnap.exists() ? userDocSnap.data()?.username : currentUser.displayName || "Anonymous";
       
-      const commentData: Omit<CommentDoc, 'id'> = {
+      const commentData: Omit<CommentDoc, 'id' | 'createdAt'> & { createdAt: any } = { // Type createdAt as any for serverTimestamp
         userId: currentUser.uid,
         username: username,
         userPhotoURL: currentUser.photoURL,
         text: newComment.trim(),
-        createdAt: serverTimestamp() as Timestamp, // Cast because serverTimestamp is a sentinel
+        createdAt: serverTimestamp(),
       };
       const commentsColRef = collection(db, 'mangas', mangaId, 'comments');
       await addDoc(commentsColRef, commentData);
       
       setNewComment('');
       toast({ title: "Comment Posted!" });
-      fetchComments(); // Refresh comments
+      fetchComments(); 
     } catch (error) {
       console.error("Error posting comment:", error);
       toast({ title: "Error", description: "Could not post comment.", variant: "destructive" });
@@ -266,7 +262,7 @@ export default function MangaDetailPage() {
   };
   
   const getInitials = (name: string | null | undefined) => {
-    if (!name) return "A"; // Anonymous
+    if (!name) return "A"; 
     const names = name.split(' ');
     if (names.length === 1) return names[0][0]?.toUpperCase() || "A";
     return (names[0][0] + (names[names.length - 1][0] || '')).toUpperCase();
@@ -278,7 +274,7 @@ export default function MangaDetailPage() {
       <div className="flex flex-col min-h-screen bg-neutral-dark">
         <Header />
         <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
-          <Skeleton className="h-10 w-24 mb-6" /> {/* Back button */}
+          <Skeleton className="h-10 w-24 mb-6" /> 
           <Card className="bg-neutral-medium border-neutral-light">
             <CardHeader>
               <Skeleton className="h-10 w-3/4 mb-2" />
@@ -295,7 +291,6 @@ export default function MangaDetailPage() {
                   <Skeleton className="h-5 w-full mb-1" />
                   <Skeleton className="h-5 w-4/5" />
                 </div>
-                {/* Removed genre skeleton */}
                 <div>
                   <Skeleton className="h-7 w-1/2 mb-3" />
                   <Skeleton className="h-20 w-full" />
@@ -357,6 +352,7 @@ export default function MangaDetailPage() {
                   className="w-full h-full"
                   data-ai-hint={manga.dataAiHint || "manga cover detail"}
                   priority 
+                  onError={(e) => (e.currentTarget.src = 'https://placehold.co/400x600/2D3748/A0AEC0?text=Invalid+URL')}
                 />
               </div>
               <div className="flex items-center space-x-2 mt-4">
@@ -364,15 +360,20 @@ export default function MangaDetailPage() {
                     variant={hasLiked ? "secondary" : "outline"} 
                     onClick={handleLike} 
                     disabled={isLiking}
-                    className={cn("flex-1 group", hasLiked && "bg-brand-primary/20 text-brand-primary border-brand-primary/50 hover:bg-brand-primary/30")}
+                    className={cn(
+                        "flex-1 group", 
+                        hasLiked && "bg-brand-primary/20 text-brand-primary border-brand-primary/50 hover:bg-brand-primary/30 focus-visible:ring-brand-primary",
+                        !hasLiked && "hover:bg-neutral-light focus-visible:ring-foreground"
+                    )}
+                    aria-pressed={hasLiked}
                   >
-                      <ThumbsUp className={cn("mr-2 h-5 w-5 group-hover:scale-110 transition-transform", hasLiked && "fill-current")} /> 
+                      <ThumbsUp className={cn("mr-2 h-5 w-5 group-hover:scale-110 transition-transform", hasLiked && "fill-brand-primary")} /> 
                       {likeCount}
                   </Button>
-                  <Button variant="outline" className="flex-1 group" onClick={() => document.getElementById('comment-section')?.focus()}>
+                  <Button variant="outline" className="flex-1 group hover:bg-neutral-light focus-visible:ring-foreground" onClick={() => document.getElementById('comment-section')?.focus()}>
                       <MessageCircle className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" /> {comments.length}
                   </Button>
-                  <div className="flex items-center text-neutral-extralight/80 p-2 rounded-md border border-input bg-background group">
+                  <div className="flex items-center text-neutral-extralight/80 p-2 rounded-md border border-input bg-background group h-10">
                     <Eye className="mr-2 h-5 w-5 text-neutral-extralight/70 group-hover:text-brand-primary transition-colors" /> {viewCount}
                   </div>
               </div>
@@ -389,7 +390,6 @@ export default function MangaDetailPage() {
                 <h2 className="text-xl font-semibold text-white mb-2 font-headline">Description</h2>
                 <p className="text-neutral-extralight/90 font-body whitespace-pre-line">{manga.description || "No description available."}</p>
               </div>
-              {/* Genres display removed */}
               {reviewSummary && (
                 <div>
                   <h2 className="text-xl font-semibold text-white mb-3 font-headline">AI Review Summary</h2>
@@ -429,21 +429,30 @@ export default function MangaDetailPage() {
                     </div>
                 </div>
                )}
-                 {/* Comment Section */}
                 <div id="comment-section" className="pt-4">
-                    <h2 className="text-xl font-semibold text-white mb-3 font-headline">Comments ({comments.length})</h2>
+                    <h2 className="text-xl font-semibold text-white mb-4 font-headline">Comments ({comments.length})</h2>
                     {currentUser ? (
                         <form onSubmit={handlePostComment} className="mb-6 space-y-3">
-                            <Textarea
-                                value={newComment}
-                                onChange={(e) => setNewComment(e.target.value)}
-                                placeholder="Write a comment..."
-                                className="bg-neutral-light text-neutral-extralight"
-                                rows={3}
-                            />
-                            <Button type="submit" disabled={isPostingComment || !newComment.trim()} className="bg-brand-primary hover:bg-brand-primary/80 text-white">
-                                <Send className="mr-2 h-4 w-4"/> {isPostingComment ? 'Posting...' : 'Post Comment'}
-                            </Button>
+                            <div className="flex items-start space-x-3">
+                                <Avatar className="h-10 w-10 mt-1">
+                                    <AvatarImage src={currentUser.photoURL || undefined} alt={currentUser.displayName || "User"}/>
+                                    <AvatarFallback className="bg-neutral-light text-brand-primary">
+                                        {getInitials(currentUser.displayName)}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <Textarea
+                                    value={newComment}
+                                    onChange={(e) => setNewComment(e.target.value)}
+                                    placeholder="Add a public comment..."
+                                    className="bg-neutral-light text-neutral-extralight border-neutral-light focus:ring-brand-primary flex-1"
+                                    rows={2}
+                                />
+                            </div>
+                            <div className="flex justify-end">
+                                <Button type="submit" disabled={isPostingComment || !newComment.trim()} className="bg-brand-primary hover:bg-brand-primary/80 text-white">
+                                    <Send className="mr-2 h-4 w-4"/> {isPostingComment ? 'Posting...' : 'Comment'}
+                                </Button>
+                            </div>
                         </form>
                     ) : (
                         <p className="text-neutral-extralight/70 mb-4">
@@ -452,25 +461,37 @@ export default function MangaDetailPage() {
                     )}
 
                     {isLoadingComments ? (
-                        <p className="text-neutral-extralight/70">Loading comments...</p>
+                        <div className="space-y-4">
+                            {[...Array(2)].map((_, i) => (
+                                <div key={i} className="flex items-start space-x-3 bg-neutral-light p-3 rounded-md">
+                                    <Skeleton className="h-10 w-10 rounded-full" />
+                                    <div className="flex-1 space-y-2">
+                                        <Skeleton className="h-4 w-1/4" />
+                                        <Skeleton className="h-4 w-3/4" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     ) : comments.length > 0 ? (
                         <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
                             {comments.map(comment => (
-                                <div key={comment.id} className="flex items-start space-x-3 bg-neutral-light p-3 rounded-md">
-                                    <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+                                <div key={comment.id} className="flex items-start space-x-3 bg-neutral-light p-3 rounded-lg shadow">
+                                    <Avatar className="h-8 w-8 sm:h-10 sm:w-10 shrink-0">
                                         <AvatarImage src={comment.userPhotoURL || undefined} alt={comment.username} />
                                         <AvatarFallback className="bg-neutral-medium text-brand-primary text-sm">
                                             {getInitials(comment.username)}
                                         </AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1">
-                                        <div className="flex items-center justify-between">
+                                        <div className="flex items-baseline space-x-2">
                                             <p className="text-sm font-semibold text-white">{comment.username}</p>
-                                            <p className="text-xs text-neutral-extralight/60">
-                                                {comment.createdAt?.toDate().toLocaleDateString()}
-                                            </p>
+                                            {comment.createdAt?.toDate && (
+                                                <p className="text-xs text-neutral-extralight/60">
+                                                    {formatDistanceToNowStrict(comment.createdAt.toDate(), { addSuffix: true })}
+                                                </p>
+                                            )}
                                         </div>
-                                        <p className="text-sm text-neutral-extralight/90 whitespace-pre-line">{comment.text}</p>
+                                        <p className="text-sm text-neutral-extralight/90 whitespace-pre-line mt-1">{comment.text}</p>
                                     </div>
                                 </div>
                             ))}
@@ -493,3 +514,4 @@ export default function MangaDetailPage() {
     </div>
   );
 }
+
