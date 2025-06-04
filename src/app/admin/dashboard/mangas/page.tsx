@@ -44,13 +44,14 @@ const initialMangaDetails = {
   externalReadLink: '',
 };
 
-const IMGBB_API_KEY = "2bb2346a6a907388d8a3b0beac2bca86"; // Keep this if you still want upload functionality
+const IMGBB_API_KEY = "2bb2346a6a907388d8a3b0beac2bca86"; 
 
 export default function ManageMangasPage() {
   const [mangaDetails, setMangaDetails] = useState(initialMangaDetails);
   const [mangas, setMangas] = useState<Manga[]>([]);
   const [allGenres, setAllGenres] = useState<Genre[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // General loading for list
+  const [isSubmittingManga, setIsSubmittingManga] = useState(false); // Specific for form submission
   const [isFetchingGenres, setIsFetchingGenres] = useState(true);
   const [selectedCoverFile, setSelectedCoverFile] = useState<File | null>(null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
@@ -105,8 +106,6 @@ export default function ManageMangasPage() {
   const handleCoverFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedCoverFile(e.target.files[0]);
-      // Clear manual URL if a file is selected for upload
-      // setMangaDetails(prev => ({ ...prev, imageUrl: '' })); 
     } else {
       setSelectedCoverFile(null);
     }
@@ -161,20 +160,28 @@ export default function ManageMangasPage() {
       return;
     }
     
+    setIsSubmittingManga(true);
     try {
-      setIsLoading(true); // Indicate general loading for submission
-      await addDoc(collection(db, 'mangas'), {
+      const dataToSave: any = {
         title: mangaDetails.title.trim(),
         description: mangaDetails.description.trim(),
         chapters: parseInt(mangaDetails.chapters) || 0,
         status: mangaDetails.status,
         imageUrl: mangaDetails.imageUrl.trim(),
         genres: mangaDetails.selectedGenres,
-        dataAiHint: mangaDetails.dataAiHint.trim() || undefined,
-        externalReadLink: mangaDetails.externalReadLink.trim() || undefined,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      });
+      };
+
+      if (mangaDetails.dataAiHint.trim()) {
+        dataToSave.dataAiHint = mangaDetails.dataAiHint.trim();
+      }
+      if (mangaDetails.externalReadLink.trim()) {
+        dataToSave.externalReadLink = mangaDetails.externalReadLink.trim();
+      }
+      
+      await addDoc(collection(db, 'mangas'), dataToSave);
+
       toast({ title: "Manga Added", description: `Manga "${mangaDetails.title}" added successfully.` });
       setMangaDetails(initialMangaDetails); 
       const fileInput = document.getElementById('coverImageFile') as HTMLInputElement | null;
@@ -185,7 +192,7 @@ export default function ManageMangasPage() {
       console.error("Error adding manga: ", error);
       toast({ title: "Error Adding Manga", description: error.message || "Could not add manga.", variant: "destructive" });
     } finally {
-      setIsLoading(false);
+      setIsSubmittingManga(false);
     }
   };
   
@@ -248,7 +255,6 @@ export default function ManageMangasPage() {
               </div>
             </div>
             
-            {/* Cover Image Section - Combined URL input and Upload */}
             <div>
               <Label htmlFor="imageUrl" className="text-neutral-extralight">Cover Image URL</Label>
               <Input 
@@ -271,7 +277,7 @@ export default function ManageMangasPage() {
                     onChange={handleCoverFileChange} 
                     className="bg-neutral-light text-neutral-extralight flex-grow file:text-sm file:font-medium file:text-brand-primary file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:bg-brand-primary/20 hover:file:bg-brand-primary/30"
                 />
-                <Button type="button" onClick={handleCoverUpload} disabled={!selectedCoverFile || isUploadingCover} className="bg-accent hover:bg-accent/80 text-accent-foreground shrink-0 w-full sm:w-auto">
+                <Button type="button" onClick={handleCoverUpload} disabled={!selectedCoverFile || isUploadingCover || isSubmittingManga} className="bg-accent hover:bg-accent/80 text-accent-foreground shrink-0 w-full sm:w-auto">
                   <UploadCloud className="mr-2 h-4 w-4" /> {isUploadingCover ? 'Uploading...' : 'Upload & Use Image'}
                 </Button>
               </div>
@@ -284,7 +290,7 @@ export default function ManageMangasPage() {
                         alt="Cover preview" 
                         layout="fill" 
                         objectFit="cover" 
-                        key={mangaDetails.imageUrl} // Add key to force re-render on URL change
+                        key={mangaDetails.imageUrl}
                         onError={(e) => (e.currentTarget.src = 'https://placehold.co/300x450/2D3748/A0AEC0?text=Invalid+URL')}
                     />
                   </div>
@@ -321,8 +327,8 @@ export default function ManageMangasPage() {
               <Label htmlFor="dataAiHint" className="text-neutral-extralight">AI Image Hint (Optional)</Label>
               <Input id="dataAiHint" name="dataAiHint" type="text" value={mangaDetails.dataAiHint} onChange={handleChange} placeholder="e.g., epic battle anime" className="bg-neutral-light text-neutral-extralight" />
             </div>
-            <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white w-full sm:w-auto" disabled={isLoading || isUploadingCover}>
-              {isLoading && !isUploadingCover ? 'Adding Manga...' : 'Add Manga'}
+            <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white w-full sm:w-auto" disabled={isSubmittingManga || isUploadingCover}>
+              {isSubmittingManga ? 'Adding Manga...' : 'Add Manga'}
             </Button>
           </CardContent>
         </form>
@@ -338,7 +344,7 @@ export default function ManageMangasPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading && mangas.length === 0 ? ( // Show loading only if mangas haven't been fetched yet
+          {isLoading && mangas.length === 0 ? ( 
              <p className="text-neutral-extralight/70">Loading mangas...</p>
           ) : mangas.length === 0 ? (
             <p className="text-neutral-extralight/70">No mangas added yet.</p>
