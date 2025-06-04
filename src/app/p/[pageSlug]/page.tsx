@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useState, type ChangeEvent, type FormEvent, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -40,7 +40,7 @@ interface CustomPageData {
   category?: string;
   landingImageUrl?: string;
   dataAiHint?: string;
-  views: number; // Ensured it's always number
+  views: number;
   likes: number; 
   defaultReadingMode?: 'horizontal' | 'vertical';
   createdAt: Timestamp;
@@ -97,14 +97,18 @@ export default function PublicCustomPage() {
   const [newComment, setNewComment] = useState('');
   const [isPostingComment, setIsPostingComment] = useState(false);
   const [isLoadingComments, setIsLoadingComments] = useState(true);
-  const [showCommentBox, setShowCommentBox] = useState(false); // For toggling comment input form
+  const [showCommentBox, setShowCommentBox] = useState(false);
   const [currentViewCount, setCurrentViewCount] = useState(0);
+
+  const imageContainerRef = useRef<HTMLDivElement>(null);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchEndX, setTouchEndX] = useState<number | null>(null);
+  const swipeThreshold = 50;
 
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
-      // No need to call checkIfUserLiked here, it will be called after pageData is set
     });
     return () => unsubscribe();
   }, []); 
@@ -117,7 +121,7 @@ export default function PublicCustomPage() {
         setHasLiked(docSnap.exists());
     } catch (error) {
         console.error("Error checking if user liked:", error);
-        setHasLiked(false); // Default to false on error
+        setHasLiked(false);
     }
   };
   
@@ -135,9 +139,9 @@ export default function PublicCustomPage() {
           const docSnap = querySnapshot.docs[0];
           const data = { id: docSnap.id, ...docSnap.data(), views: docSnap.data().views || 0, likes: docSnap.data().likes || 0 } as CustomPageData;
           setPageData(data);
-          setCurrentViewCount(data.views); // Initialize view count from fetched data
+          setCurrentViewCount(data.views); 
           setReadingMode(data.defaultReadingMode || 'horizontal');
-          setLikeCount(data.likes); 
+          setLikeCount(data.likes || 0); 
 
           if (currentUser) {
             checkIfUserLiked(currentUser.uid, data.id);
@@ -150,7 +154,6 @@ export default function PublicCustomPage() {
             await updateDoc(pageDocRef, {
               views: increment(1)
             });
-            // Update local state immediately after successful DB update
             setCurrentViewCount(prev => prev + 1); 
             localStorage.setItem(viewedKey, 'true');
           }
@@ -172,8 +175,6 @@ export default function PublicCustomPage() {
   }, [pageSlug, toast, currentUser]); 
 
   useEffect(() => {
-    // This effect runs if pageData exists and currentUser is known,
-    // ensuring like status is checked after initial data load or user auth state change.
     if (pageData?.id && currentUser?.uid) {
         checkIfUserLiked(currentUser.uid, pageData.id);
     }
@@ -330,17 +331,17 @@ export default function PublicCustomPage() {
     setIsDownloadLinksModalOpen(true);
   };
 
-
-  const navigateImage = (direction: 'next' | 'prev') => {
+  const navigateImage = useCallback((direction: 'next' | 'prev') => {
     if (!selectedChapter || readingMode === 'vertical') return;
     setCurrentImageIndex(prev => {
+      const totalImages = selectedChapter.imageUrls.length;
       if (direction === 'next') {
-        return prev < selectedChapter.imageUrls.length - 1 ? prev + 1 : prev;
+        return prev < totalImages - 1 ? prev + 1 : prev;
       } else {
         return prev > 0 ? prev - 1 : prev;
       }
     });
-  };
+  }, [selectedChapter, readingMode, setCurrentImageIndex]);
 
   const navigateChapter = (direction: 'next' | 'prev') => {
     if (!selectedChapter) return;
@@ -355,6 +356,51 @@ export default function PublicCustomPage() {
   const filteredChapters = chapters.filter(chapter =>
     chapter.name.toLowerCase().includes(chapterSearchTerm.toLowerCase())
   );
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (readingMode !== 'horizontal') return;
+    setTouchStartX(e.targetTouches[0].clientX);
+    setTouchEndX(null); 
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (readingMode !== 'horizontal' || touchStartX === null) return;
+    setTouchEndX(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (readingMode !== 'horizontal' || touchStartX === null || touchEndX === null) return;
+
+    const deltaX = touchEndX - touchStartX;
+
+    if (Math.abs(deltaX) > swipeThreshold) {
+      if (deltaX > 0) { 
+        navigateImage('prev');
+      } else { 
+        navigateImage('next');
+      }
+    }
+    setTouchStartX(null);
+    setTouchEndX(null);
+  };
+
+  useEffect(() => {
+    if (!selectedChapter || readingMode !== 'horizontal') return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowLeft') {
+        navigateImage('prev');
+      } else if (event.key === 'ArrowRight') {
+        navigateImage('next');
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedChapter, readingMode, navigateImage]);
+
 
   if (isLoading) {
     return (
@@ -459,16 +505,24 @@ export default function PublicCustomPage() {
 
         <main className={`flex-grow pt-16 pb-16 sm:pt-20 sm:pb-20 overflow-hidden ${readingMode === 'vertical' ? 'overflow-y-auto' : ''}`}>
           {readingMode === 'horizontal' && totalImages > 0 && currentImageUrl && (
-             <div className="flex items-center justify-center h-full">
+             <div
+                ref={imageContainerRef}
+                className="flex items-center justify-center h-full w-full cursor-grab active:cursor-grabbing"
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                style={{ touchAction: 'pan-y' }} 
+              >
                 <Image
                 key={currentImageUrl} 
                 src={currentImageUrl}
                 alt={`Page ${currentImageIndex + 1} of ${selectedChapter.name}`}
                 width={800} 
                 height={1200} 
-                className="max-w-full max-h-full object-contain"
+                className="max-w-full max-h-full object-contain select-none" // Added select-none
                 data-ai-hint="manga page"
                 priority={currentImageIndex < 2} 
+                draggable="false" // Prevent browser default image drag
                 onError={(e) => (e.currentTarget.src = 'https://placehold.co/800x1200/000000/FFFFFF?text=Error+Loading+Image')}
                 />
             </div>
@@ -497,26 +551,11 @@ export default function PublicCustomPage() {
           )}
         </main>
         
-        <footer className="fixed bottom-0 left-0 right-0 z-50 p-2 sm:p-3 flex justify-between items-center bg-black/80 backdrop-blur-sm">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigateImage('prev')} 
-            disabled={currentImageIndex <= 0 || totalImages === 0 || readingMode === 'vertical'}
-            className={`hover:bg-white/10 text-sm sm:text-base ${readingMode === 'vertical' ? 'invisible' : ''}`}
-          >
-            Previous
-          </Button>
+        <footer className="fixed bottom-0 left-0 right-0 z-50 p-2 sm:p-3 flex justify-center items-center bg-black/80 backdrop-blur-sm">
+          {/* Previous and Next page buttons removed for horizontal mode in favor of swipe/keyboard */}
           <Button variant="ghost" size="icon" onClick={closeChapterViewer} className="hover:bg-white/10">
             <CloseIcon className="h-5 w-5 sm:h-6 sm:w-6" />
             <span className="sr-only">Close Viewer</span>
-          </Button>
-          <Button 
-            variant="ghost" 
-            onClick={() => navigateImage('next')} 
-            disabled={currentImageIndex >= totalImages - 1 || totalImages === 0 || readingMode === 'vertical'}
-            className={`hover:bg-white/10 text-sm sm:text-base ${readingMode === 'vertical' ? 'invisible' : ''}`}
-          >
-            Next
           </Button>
         </footer>
       </div>
@@ -714,7 +753,6 @@ export default function PublicCustomPage() {
           </div>
         </section>
 
-        {/* Comment Input Section - Toggled by showCommentBox */}
         {showCommentBox && (
             <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-neutral-dark">
                 <h3 className="text-xl font-semibold text-white mb-4">Leave a Comment</h3>
@@ -750,8 +788,6 @@ export default function PublicCustomPage() {
             </section>
         )}
 
-
-        {/* Display Comments Section - Always visible if comments exist or are loading */}
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-neutral-dark">
             <h3 className="text-xl font-semibold text-white mb-4">
                 {comments.length > 0 ? `Comments (${comments.length})` : (isLoadingComments ? 'Loading Comments...' : 'Comments')}
