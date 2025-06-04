@@ -28,6 +28,7 @@ export default function AssignMangaToGenrePage() {
   const [allGenres, setAllGenres] = useState<Genre[]>([]);
   const [isLoadingMangas, setIsLoadingMangas] = useState(true);
   const [isLoadingGenres, setIsLoadingGenres] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   const fetchMangas = async () => {
@@ -78,6 +79,7 @@ export default function AssignMangaToGenrePage() {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const mangaRef = doc(db, 'mangas', selectedMangaId);
       await updateDoc(mangaRef, {
@@ -85,13 +87,14 @@ export default function AssignMangaToGenrePage() {
       });
       const manga = allMangas.find(m => m.id === selectedMangaId);
       toast({ title: "Success", description: `Genre "${selectedGenreName}" assigned to manga "${manga?.title || 'Selected Manga'}".` });
-      // Optionally, reset selections or refetch manga details if displaying them
+      // Reset selections after successful assignment
       setSelectedMangaId('');
       setSelectedGenreName('');
     } catch (error) {
       console.error("Error assigning genre to manga: ", error);
-      toast({ title: "Error", description: "Could not assign genre to manga.", variant: "destructive" });
+      toast({ title: "Error", description: "Could not assign genre to manga. Ensure the manga and genre exist and try again.", variant: "destructive" });
     }
+    setIsSubmitting(false);
   };
 
   return (
@@ -104,14 +107,14 @@ export default function AssignMangaToGenrePage() {
             <Link2 className="mr-2 h-5 w-5 text-brand-primary" /> Assign Manga
           </CardTitle>
           <CardDescription className="text-neutral-extralight/80">
-            Select a manga and a genre to assign the manga to that genre.
+            Select a manga and a genre to assign the manga to that genre. The genre page should update automatically after assignment.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleAssign}>
           <CardContent className="space-y-6">
             <div>
               <Label htmlFor="mangaSelect" className="text-neutral-extralight mb-1 block">Select Manga</Label>
-              <Select value={selectedMangaId} onValueChange={setSelectedMangaId} disabled={isLoadingMangas}>
+              <Select value={selectedMangaId} onValueChange={setSelectedMangaId} disabled={isLoadingMangas || isSubmitting}>
                 <SelectTrigger id="mangaSelect" className="w-full bg-neutral-light border-neutral-light text-neutral-extralight focus:ring-brand-primary">
                   <SelectValue placeholder={isLoadingMangas ? "Loading mangas..." : "Select a manga"} />
                 </SelectTrigger>
@@ -127,7 +130,7 @@ export default function AssignMangaToGenrePage() {
 
             <div>
               <Label htmlFor="genreSelect" className="text-neutral-extralight mb-1 block">Select Genre</Label>
-              <Select value={selectedGenreName} onValueChange={setSelectedGenreName} disabled={isLoadingGenres}>
+              <Select value={selectedGenreName} onValueChange={setSelectedGenreName} disabled={isLoadingGenres || isSubmitting}>
                 <SelectTrigger id="genreSelect" className="w-full bg-neutral-light border-neutral-light text-neutral-extralight focus:ring-brand-primary">
                   <SelectValue placeholder={isLoadingGenres ? "Loading genres..." : "Select a genre"} />
                 </SelectTrigger>
@@ -141,8 +144,8 @@ export default function AssignMangaToGenrePage() {
               </Select>
             </div>
             
-            <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white w-full sm:w-auto" disabled={isLoadingMangas || isLoadingGenres}>
-              Assign to Genre
+            <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white w-full sm:w-auto" disabled={isLoadingMangas || isLoadingGenres || isSubmitting}>
+              {isSubmitting ? 'Assigning...' : 'Assign to Genre'}
             </Button>
           </CardContent>
         </form>
