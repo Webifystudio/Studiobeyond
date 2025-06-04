@@ -5,10 +5,9 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { signInWithGoogle, auth } from '@/lib/firebase'; // Assuming auth is exported for onAuthStateChanged
+import { signInWithGoogle, auth } from '@/lib/firebase'; 
 import { useToast } from "@/hooks/use-toast";
-import { ChromeIcon } from 'lucide-react'; // Or a Google G icon SVG
-import Link from 'next/link'; // Added this import
+import Link from 'next/link'; 
 
 // Custom Google Icon SVG
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -30,7 +29,7 @@ export default function LoginPage() {
     // If user is already logged in, redirect them from login page
     const unsubscribe = auth.onAuthStateChanged(user => {
       if (user) {
-        router.push('/'); // Or to dashboard, or wherever you prefer
+        router.push('/'); 
       }
     });
     return () => unsubscribe();
@@ -38,16 +37,33 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = async () => {
     try {
-      const { user, isNewUser, username } = await signInWithGoogle();
-      toast({ title: "Login Successful", description: `Welcome, ${user.displayName}!` });
-      if (isNewUser || !username) { // Check if username is missing even for existing user
+      const signInResult = await signInWithGoogle();
+
+      if (!signInResult) {
+        // signInWithGoogle returned null, meaning the user closed the popup.
+        toast({
+          title: "Login Canceled",
+          description: "You closed the Google Sign-In window before completing the process.",
+          variant: "default",
+        });
+        return; // Stop further processing
+      }
+
+      const { user, isNewUser, username } = signInResult;
+      toast({ title: "Login Successful", description: `Welcome, ${user.displayName || 'User'}!` });
+      if (isNewUser || !username) { 
         router.push('/profile/setup');
       } else {
-        router.push('/'); // Or to a specific dashboard page
+        router.push('/'); 
       }
     } catch (error: any) {
+      // This catch block now handles other unexpected errors from signInWithGoogle
       console.error("Google Sign-In Error:", error);
-      toast({ title: "Login Failed", description: error.message || "Could not sign in with Google.", variant: "destructive" });
+      toast({ 
+        title: "Login Failed", 
+        description: error.message || "An unexpected error occurred during sign-in.", 
+        variant: "destructive" 
+      });
     }
   };
 

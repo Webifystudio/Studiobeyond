@@ -1,7 +1,7 @@
 
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getFirestore, type Firestore, serverTimestamp as originalServerTimestamp, collection, doc, setDoc, getDoc, getDocs, updateDoc, increment, query, where, orderBy, arrayUnion, arrayRemove, type Timestamp, limit } from 'firebase/firestore'; // Added getDocs, updateDoc, increment, query, where, orderBy, arrayUnion, arrayRemove, Timestamp, limit
-import { getAuth, type Auth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as firebaseSignOut, type User } from 'firebase/auth';
+import { getFirestore, type Firestore, serverTimestamp as originalServerTimestamp, collection, doc, setDoc, getDoc, getDocs, updateDoc, increment, query, where, orderBy, arrayUnion, arrayRemove, type Timestamp, limit } from 'firebase/firestore';
+import { getAuth, type Auth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as firebaseSignOut, type User as FirebaseUserType } from 'firebase/auth';
 // import { getStorage, type FirebaseStorage } from 'firebase/storage'; // Add if you need Firebase Storage
 
 const firebaseConfig = {
@@ -32,7 +32,7 @@ const serverTimestamp = originalServerTimestamp;
 
 const googleProvider = new GoogleAuthProvider();
 
-const signInWithGoogle = async () => {
+const signInWithGoogle = async (): Promise<{ user: FirebaseUserType; isNewUser: boolean; username: string | null } | null> => {
   try {
     const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;
@@ -53,7 +53,12 @@ const signInWithGoogle = async () => {
       return { user, isNewUser: true, username: null };
     }
     return { user, isNewUser: false, username: userDocSnap.data()?.username };
-  } catch (error) {
+  } catch (error: any) {
+    if (error.code === 'auth/popup-closed-by-user') {
+      console.log("Google Sign-In: Popup closed by user."); // Informational log
+      return null; // Indicate user action, not an application error
+    }
+    // Log other errors and re-throw them for generic error handling by the caller
     console.error("Error during Google sign-in:", error);
     throw error;
   }
@@ -68,11 +73,12 @@ const signOut = async () => {
   }
 };
 
-export { app, db, auth, serverTimestamp, signInWithGoogle, signOut, onAuthStateChanged, GoogleAuthProvider, type User };
+// Export User type from firebase/auth as FirebaseUserType if it was intended for signInWithGoogle's return type.
+// If the 'User' type used in other parts of the app (like profile pages) is distinct, that's fine.
+export { app, db, auth, serverTimestamp, signInWithGoogle, signOut, onAuthStateChanged, GoogleAuthProvider, type FirebaseUserType as User };
 // Exporting Firestore functions for direct use
 export { collection, doc, setDoc, getDoc, getDocs, updateDoc, increment, query, where, orderBy, arrayUnion, arrayRemove, type Timestamp, limit };
 
 // Note: For production applications, it's highly recommended to store your 
 // API keys and other sensitive configuration in environment variables 
 // (e.g., using a .env.local file) rather than hardcoding them directly in the source code.
-
