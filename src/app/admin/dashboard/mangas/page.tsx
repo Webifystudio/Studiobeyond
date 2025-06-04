@@ -130,6 +130,9 @@ export default function ManageMangasPage() {
         setMangaDetails(prev => ({ ...prev, imageUrl: result.data.display_url }));
         toast({ title: "Cover Image Uploaded", description: "Image successfully uploaded to ImgBB." });
         setSelectedCoverFile(null); // Clear file input
+        const fileInput = document.getElementById('coverImageFile') as HTMLInputElement | null;
+        if (fileInput) fileInput.value = '';
+
       } else {
         throw new Error(result.error?.message || 'ImgBB upload failed');
       }
@@ -164,7 +167,7 @@ export default function ManageMangasPage() {
         chapters: parseInt(mangaDetails.chapters) || 0,
         status: mangaDetails.status,
         imageUrl: mangaDetails.imageUrl.trim(),
-        genres: mangaDetails.selectedGenres,
+        genres: mangaDetails.selectedGenres, // Assign selected genres
         dataAiHint: mangaDetails.dataAiHint.trim() || undefined,
         externalReadLink: mangaDetails.externalReadLink.trim() || undefined,
         createdAt: serverTimestamp(),
@@ -172,6 +175,11 @@ export default function ManageMangasPage() {
       });
       toast({ title: "Manga Added", description: `Manga "${mangaDetails.title}" added successfully.` });
       setMangaDetails(initialMangaDetails); 
+      // Reset file input visually if it exists
+      const fileInput = document.getElementById('coverImageFile') as HTMLInputElement | null;
+      if (fileInput) fileInput.value = '';
+      setSelectedCoverFile(null);
+
       fetchMangas(); 
     } catch (error: any) {
       console.error("Error adding manga: ", error);
@@ -238,10 +246,10 @@ export default function ManageMangasPage() {
               </div>
             </div>
             <div>
-              <Label htmlFor="coverImage" className="text-neutral-extralight">Cover Image</Label>
+              <Label htmlFor="coverImageFile" className="text-neutral-extralight">Cover Image</Label>
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1">
                 <Input 
-                    id="coverImage" 
+                    id="coverImageFile" 
                     type="file" 
                     accept="image/*" 
                     onChange={handleCoverFileChange} 
@@ -357,5 +365,4 @@ export default function ManageMangasPage() {
     </div>
   );
 }
-
     
