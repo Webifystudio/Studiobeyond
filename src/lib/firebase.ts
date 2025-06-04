@@ -18,7 +18,9 @@ import {
   arrayRemove, 
   type Timestamp, 
   limit,
-  documentId
+  documentId,
+  addDoc as firestoreAddDoc, // Renamed to avoid conflict if we had a local addDoc
+  deleteDoc
 } from 'firebase/firestore';
 import { 
   getAuth, 
@@ -29,7 +31,8 @@ import {
   signOut as firebaseSignOut, 
   type User as FirebaseUserType,
   createUserWithEmailAndPassword,
-  signInWithEmailAndPassword
+  signInWithEmailAndPassword,
+  updateProfile as updateAuthProfile // Added for updating auth user profile
 } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -55,6 +58,7 @@ if (getApps().length === 0) {
 db = getFirestore(app);
 auth = getAuth(app);
 const serverTimestamp = originalServerTimestamp;
+const addDoc = firestoreAddDoc; // Exporting the renamed firestoreAddDoc
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -139,6 +143,7 @@ export {
   GoogleAuthProvider, 
   createUserWithEmailAndPasswordFirebase,
   signInWithEmailAndPasswordFirebase,
+  updateAuthProfile, // Exporting updateProfile from firebase/auth
   type FirebaseUserType as User 
 };
 export { 
@@ -156,5 +161,7 @@ export {
   arrayRemove, 
   type Timestamp, 
   limit,
-  documentId
+  documentId,
+  addDoc, // Now correctly exports the renamed firestoreAddDoc
+  deleteDoc
 };

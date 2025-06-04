@@ -1,23 +1,26 @@
 
 "use client";
 
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { auth, db, doc, getDoc, updateDoc, type User } from '@/lib/firebase';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { auth, db, doc, getDoc, updateDoc, updateAuthProfile, type User } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, UploadCloud } from 'lucide-react';
 import Link from 'next/link';
+
+const IMGBB_API_KEY = "2bb2346a6a907388d8a3b0beac2bca86";
 
 export default function ProfileSettingsPage() {
   const [username, setUsername] = useState('');
-  const [newPhotoURL, setNewPhotoURL] = useState('');
+  const [currentPhotoURL, setCurrentPhotoURL] = useState(''); // For displaying current/new photo
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [userData, setUserData] = useState<any>(null); // To store Firestore user data
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
@@ -31,13 +34,11 @@ export default function ProfileSettingsPage() {
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
           const dbUser = userDocSnap.data();
-          setUserData(dbUser);
           setUsername(dbUser.username || user.displayName || '');
-          setNewPhotoURL(dbUser.photoURL || user.photoURL || '');
+          setCurrentPhotoURL(dbUser.photoURL || user.photoURL || '');
         } else {
-           // Should not happen if profile setup was completed
-           toast({title: "Error", description: "User data not found.", variant: "destructive"});
-           router.push('/');
+           toast({title: "Error", description: "User data not found. Please complete profile setup if you haven't.", variant: "destructive"});
+           router.push('/profile/setup'); // Or redirect to home if setup is assumed
         }
         setIsLoading(false);
       } else {
@@ -46,6 +47,61 @@ export default function ProfileSettingsPage() {
     });
     return () => unsubscribe();
   }, [router, toast]);
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+      // Optionally, show a local preview if desired, though ImgBB is quick
+      // setCurrentPhotoURL(URL.createObjectURL(e.target.files[0]));
+    } else {
+      setSelectedFile(null);
+    }
+  };
+
+  const handleImageUpload = async () => {
+    if (!selectedFile || !currentUser) {
+      toast({ title: "No File", description: "Please select an image file first.", variant: "default" });
+      return;
+    }
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('image', selectedFile);
+    formData.append('key', IMGBB_API_KEY);
+
+    try {
+      const response = await fetch('https://api.imgbb.com/1/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const result = await response.json();
+      if (result.success) {
+        const newImgbbUrl = result.data.display_url;
+        setCurrentPhotoURL(newImgbbUrl); // Update display immediately
+        
+        // Update Firestore
+        const userDocRef = doc(db, "users", currentUser.uid);
+        await updateDoc(userDocRef, { photoURL: newImgbbUrl });
+
+        // Optionally, update Firebase Auth user profile (less critical if app reads from Firestore)
+        if (auth.currentUser) {
+            await updateAuthProfile(auth.currentUser, { photoURL: newImgbbUrl });
+        }
+
+        toast({ title: "Profile Picture Updated", description: "Your new profile picture is set." });
+        setSelectedFile(null); // Clear selected file
+        const fileInput = document.getElementById('profilePictureFile') as HTMLInputElement | null;
+        if (fileInput) fileInput.value = '';
+
+      } else {
+        throw new Error(result.error?.message || 'ImgBB upload failed');
+      }
+    } catch (error: any) {
+      console.error("Error uploading image to ImgBB: ", error);
+      toast({ title: "Upload Error", description: error.message || "Could not upload image.", variant: "destructive" });
+    }
+    setIsUploading(false);
+  };
+
 
   const handleProfileUpdate = async (e: FormEvent) => {
     e.preventDefault();
@@ -64,17 +120,17 @@ export default function ProfileSettingsPage() {
       const userDocRef = doc(db, "users", currentUser.uid);
       const updates: any = {
         username: username.trim(),
+        // photoURL is handled by handleImageUpload now
       };
-      if (newPhotoURL.trim() && newPhotoURL.trim() !== (userData?.photoURL || currentUser.photoURL)) {
-        updates.photoURL = newPhotoURL.trim();
-        // Note: Firebase Auth profile photoURL update is separate if needed
-        // await updateProfile(currentUser, { photoURL: newPhotoURL.trim() });
-      }
 
       await updateDoc(userDocRef, updates);
       
-      toast({ title: "Profile Updated", description: "Your profile has been updated successfully." });
-      // Optionally refetch user data or rely on auth state listener to update UI if photoURL in auth object changed
+      // Optionally, update Firebase Auth displayName if it's different
+      if (auth.currentUser && auth.currentUser.displayName !== username.trim()) {
+        await updateAuthProfile(auth.currentUser, { displayName: username.trim() });
+      }
+      
+      toast({ title: "Profile Updated", description: "Your username has been updated successfully." });
     } catch (error: any) {
       console.error("Error updating profile: ", error);
       toast({ title: "Error", description: error.message || "Could not update profile.", variant: "destructive" });
@@ -97,11 +153,10 @@ export default function ProfileSettingsPage() {
     );
   }
 
-  if (!currentUser) return null; // Should be redirected by useEffect
+  if (!currentUser) return null;
 
   return (
     <div className="flex flex-col min-h-screen bg-neutral-dark">
-      {/* We can add a simplified header or no header if this page is modal-like */}
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
         <Button variant="outline" asChild className="mb-6">
           <Link href="/">
@@ -115,31 +170,40 @@ export default function ProfileSettingsPage() {
               Update your username and profile picture.
             </CardDescription>
           </CardHeader>
-          <form onSubmit={handleProfileUpdate}>
-            <CardContent className="space-y-6">
-              <div className="flex flex-col items-center space-y-3">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src={newPhotoURL || currentUser.photoURL || undefined} alt={username || currentUser.displayName || "User"} />
-                  <AvatarFallback className="bg-brand-primary text-white text-3xl">
-                    {getInitials(username || currentUser.displayName)}
-                  </AvatarFallback>
-                </Avatar>
-                 <p className="text-xs text-neutral-extralight/70">
-                    Upload image to <a href="https://imgbb.com/" target="_blank" rel="noopener noreferrer" className="text-brand-primary hover:underline">ImgBB</a> and paste URL below.
-                </p>
+          
+          <CardContent className="space-y-6">
+            <div className="flex flex-col items-center space-y-3">
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={currentPhotoURL || undefined} alt={username || currentUser.displayName || "User"} />
+                <AvatarFallback className="bg-brand-primary text-white text-3xl">
+                  {getInitials(username || currentUser.displayName)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="w-full space-y-2">
+                <Label htmlFor="profilePictureFile" className="text-neutral-extralight">Change Profile Picture</Label>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                  <Input
+                    id="profilePictureFile"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="bg-neutral-light border-neutral-light text-neutral-extralight flex-grow file:text-sm file:font-medium file:text-brand-primary file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:bg-brand-primary/20 hover:file:bg-brand-primary/30"
+                  />
+                  <Button 
+                    type="button" 
+                    onClick={handleImageUpload} 
+                    disabled={!selectedFile || isUploading || isSaving} 
+                    className="bg-accent hover:bg-accent/80 text-accent-foreground shrink-0 w-full sm:w-auto"
+                  >
+                    <UploadCloud className="mr-2 h-4 w-4" /> {isUploading ? 'Uploading...' : 'Upload Image'}
+                  </Button>
+                </div>
+                {selectedFile && <p className="text-xs text-neutral-extralight/70">Selected: {selectedFile.name}</p>}
               </div>
+            </div>
+            
+            <form onSubmit={handleProfileUpdate} className="space-y-4">
                <div>
-                <Label htmlFor="newPhotoURL" className="text-neutral-extralight">Profile Picture URL</Label>
-                <Input
-                  id="newPhotoURL"
-                  type="url"
-                  value={newPhotoURL}
-                  onChange={(e) => setNewPhotoURL(e.target.value)}
-                  className="bg-neutral-light border-neutral-light text-neutral-extralight focus:ring-brand-primary"
-                  placeholder="https://i.ibb.co/your-image.jpg"
-                />
-              </div>
-              <div>
                 <Label htmlFor="username" className="text-neutral-extralight">Username</Label>
                 <Input
                   id="username"
@@ -164,13 +228,11 @@ export default function ProfileSettingsPage() {
                   className="bg-neutral-light border-neutral-light text-neutral-extralight/70 focus:ring-brand-primary"
                 />
               </div>
-            </CardContent>
-            <CardContent>
-              <Button type="submit" className="w-full bg-brand-primary hover:bg-brand-primary/80 text-white" disabled={isSaving}>
-                {isSaving ? 'Saving Changes...' : 'Save Changes'}
+              <Button type="submit" className="w-full bg-brand-primary hover:bg-brand-primary/80 text-white" disabled={isSaving || isUploading}>
+                {isSaving ? 'Saving Username...' : 'Save Username'}
               </Button>
-            </CardContent>
-          </form>
+            </form>
+          </CardContent>
         </Card>
       </main>
     </div>
