@@ -6,15 +6,15 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { LayoutDashboard, Tag, BookOpen, Image as ImageIcon, LogOut, Home, FileText, Link2, Settings, Menu as MenuIcon } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Image as ImageIcon, LogOut, Home, FileText, Settings, Menu as MenuIcon } from 'lucide-react'; // Removed Tag, Link2
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/dashboard/genres', label: 'Manage Genres', icon: Tag },
+  // { href: '/admin/dashboard/genres', label: 'Manage Genres', icon: Tag }, // Removed
   { href: '/admin/dashboard/mangas', label: 'Manage Mangas', icon: BookOpen },
-  { href: '/admin/dashboard/assign-manga-genre', label: 'Assign Manga to Genre', icon: Link2 },
+  // { href: '/admin/dashboard/assign-manga-genre', label: 'Assign Manga to Genre', icon: Link2 }, // Removed
   { href: '/admin/dashboard/slider', label: 'Manage Slider', icon: ImageIcon },
   { href: '/admin/dashboard/pages', label: 'Manage Pages', icon: FileText },
 ];

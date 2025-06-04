@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { db, serverTimestamp } from '@/lib/firebase';
 import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, Timestamp } from 'firebase/firestore';
 import Image from 'next/image';
-import { Checkbox } from '@/components/ui/checkbox';
+// import { Checkbox } from '@/components/ui/checkbox'; // Genre Checkbox removed
 
 interface Manga {
   id: string;
@@ -21,17 +21,17 @@ interface Manga {
   chapters: number;
   status: string;
   imageUrl: string;
-  genres: string[];
+  genres?: string[]; // Optional now
   dataAiHint?: string;
   externalReadLink?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
 
-interface Genre {
-  id: string;
-  name: string;
-}
+// interface Genre { // Genre interface removed
+//   id: string;
+//   name: string;
+// }
 
 const initialMangaDetails = {
   title: '',
@@ -39,7 +39,7 @@ const initialMangaDetails = {
   chapters: '',
   status: 'Ongoing',
   imageUrl: '',
-  selectedGenres: [] as string[],
+  // selectedGenres: [] as string[], // selectedGenres removed
   dataAiHint: '',
   externalReadLink: '',
 };
@@ -49,10 +49,10 @@ const IMGBB_API_KEY = "2bb2346a6a907388d8a3b0beac2bca86";
 export default function ManageMangasPage() {
   const [mangaDetails, setMangaDetails] = useState(initialMangaDetails);
   const [mangas, setMangas] = useState<Manga[]>([]);
-  const [allGenres, setAllGenres] = useState<Genre[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // General loading for list
-  const [isSubmittingManga, setIsSubmittingManga] = useState(false); // Specific for form submission
-  const [isFetchingGenres, setIsFetchingGenres] = useState(true);
+  // const [allGenres, setAllGenres] = useState<Genre[]>([]); // allGenres state removed
+  const [isLoading, setIsLoading] = useState(true); 
+  const [isSubmittingManga, setIsSubmittingManga] = useState(false); 
+  // const [isFetchingGenres, setIsFetchingGenres] = useState(true); // isFetchingGenres state removed
   const [selectedCoverFile, setSelectedCoverFile] = useState<File | null>(null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const { toast } = useToast();
@@ -75,27 +75,11 @@ export default function ManageMangasPage() {
     setIsLoading(false);
   };
 
-  const fetchAllGenres = async () => {
-    setIsFetchingGenres(true);
-    try {
-      const genresCollection = collection(db, 'genres');
-      const q = query(genresCollection, orderBy('name', 'asc'));
-      const querySnapshot = await getDocs(q);
-      const genresList = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        name: doc.data().name,
-      } as Genre));
-      setAllGenres(genresList);
-    } catch (error) {
-      console.error("Error fetching genres: ", error);
-      toast({ title: "Error", description: "Could not fetch genres for selection.", variant: "destructive" });
-    }
-    setIsFetchingGenres(false);
-  };
+  // fetchAllGenres function removed
 
   useEffect(() => {
     fetchMangas();
-    fetchAllGenres();
+    // fetchAllGenres(); // Call removed
   }, []);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -143,15 +127,7 @@ export default function ManageMangasPage() {
     setIsUploadingCover(false);
   };
 
-
-  const handleGenreChange = (genreName: string) => {
-    setMangaDetails(prev => {
-      const newSelectedGenres = prev.selectedGenres.includes(genreName)
-        ? prev.selectedGenres.filter(g => g !== genreName)
-        : [...prev.selectedGenres, genreName];
-      return { ...prev, selectedGenres: newSelectedGenres };
-    });
-  };
+  // handleGenreChange function removed
 
   const handleAddManga = async (e: FormEvent) => {
     e.preventDefault();
@@ -168,7 +144,7 @@ export default function ManageMangasPage() {
         chapters: parseInt(mangaDetails.chapters) || 0,
         status: mangaDetails.status,
         imageUrl: mangaDetails.imageUrl.trim(),
-        genres: mangaDetails.selectedGenres,
+        // genres: mangaDetails.selectedGenres, // genres field removed from direct save here
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -179,6 +155,10 @@ export default function ManageMangasPage() {
       if (mangaDetails.externalReadLink.trim()) {
         dataToSave.externalReadLink = mangaDetails.externalReadLink.trim();
       }
+      // If genres are still desired in the data model but not managed here,
+      // they'd need to be handled separately or removed from `dataToSave`.
+      // For now, I am assuming the 'genres' field might still exist in Firestore for other purposes or future use,
+      // but it's not being set or modified from this "Add New Manga" form.
       
       await addDoc(collection(db, 'mangas'), dataToSave);
 
@@ -298,7 +278,8 @@ export default function ManageMangasPage() {
               )}
             </div>
 
-
+            {/* Genre selection removed */}
+            {/*
             <div>
               <Label className="text-neutral-extralight">Genres</Label>
               {isFetchingGenres ? <p className="text-neutral-extralight/70">Loading genres...</p> : (
@@ -319,6 +300,8 @@ export default function ManageMangasPage() {
                 </div>
               )}
             </div>
+            */}
+
             <div>
               <Label htmlFor="externalReadLink" className="text-neutral-extralight">External Read Link (Optional)</Label>
               <Input id="externalReadLink" name="externalReadLink" type="url" value={mangaDetails.externalReadLink} onChange={handleChange} placeholder="https://example.com/read/manga-title" className="bg-neutral-light text-neutral-extralight" />
@@ -365,7 +348,8 @@ export default function ManageMangasPage() {
                   <CardContent className="p-3">
                     <h3 className="font-semibold text-white truncate text-sm md:text-base" title={manga.title}>{manga.title}</h3>
                     <p className="text-xs text-neutral-extralight/80">{manga.status} - {manga.chapters} Chapters</p>
-                    <p className="text-xs text-neutral-extralight/70 truncate" title={manga.genres.join(', ')}>Genres: {manga.genres.join(', ')}</p>
+                    {/* Genre display removed from here too */}
+                    {/* <p className="text-xs text-neutral-extralight/70 truncate" title={manga.genres?.join(', ')}>Genres: {manga.genres?.join(', ')}</p> */}
                     {manga.externalReadLink && (
                       <a href={manga.externalReadLink} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-primary hover:underline flex items-center mt-1">
                          <ExternalLink className="h-3 w-3 mr-1" /> Read Externally
@@ -390,6 +374,3 @@ export default function ManageMangasPage() {
     </div>
   );
 }
-    
-
-    

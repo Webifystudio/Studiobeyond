@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface HeroSectionProps {
   title: string;
@@ -12,25 +13,47 @@ interface HeroSectionProps {
   buttonText: string;
   buttonHref: string;
   dataAiHint?: string;
+  isHomepageHero?: boolean; // New prop
 }
 
-export function HeroSection({ title, description, imageUrl, imageAlt, buttonText, buttonHref, dataAiHint }: HeroSectionProps) {
+export function HeroSection({ 
+  title, 
+  description, 
+  imageUrl, 
+  imageAlt, 
+  buttonText, 
+  buttonHref, 
+  dataAiHint,
+  isHomepageHero = false // Default to false
+}: HeroSectionProps) {
   return (
-    <section className="relative overflow-hidden mb-12 min-h-[60vh] sm:min-h-[70vh] lg:min-h-[500px] flex items-end p-6 sm:p-10">
+    <section className={cn(
+      "relative overflow-hidden flex items-end",
+      isHomepageHero ? "min-h-[calc(100vh-5rem)]" : "min-h-[60vh] sm:min-h-[70vh] lg:min-h-[500px] mb-12", // Full viewport height minus header for homepage hero
+      isHomepageHero ? "p-6 sm:p-10" : "p-6 sm:p-10" // Consistent padding or specific if needed
+    )}>
       <Image
         src={imageUrl}
         alt={imageAlt}
         layout="fill"
         objectFit="cover"
-        quality={85}
+        quality={isHomepageHero ? 90 : 85} // Higher quality for homepage hero
         className="z-0"
         data-ai-hint={dataAiHint || "featured manga anime"}
-        priority
+        priority // Always prioritize hero images
       />
-      <div className="absolute inset-0 hero-gradient z-0"></div>
-      <div className="relative z-10 text-white">
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-3 font-headline">{title}</h1>
-        <p className="text-sm sm:text-base lg:text-lg mb-6 max-w-xl text-neutral-extralight/90 font-body">
+      {/* Gradient overlay for text readability */}
+      <div className={cn(
+        "absolute inset-0 z-0",
+        isHomepageHero ? "bg-gradient-to-t from-black/70 via-black/40 to-transparent" : "hero-gradient" // More pronounced gradient for homepage
+      )}></div>
+      
+      <div className={cn(
+        "relative z-10 text-white",
+        isHomepageHero ? "container mx-auto px-4 sm:px-6 lg:px-8" : "" // Container for homepage hero text
+      )}>
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-3 font-headline shadow-black [text-shadow:_2px_2px_4px_var(--tw-shadow-color)]">{title}</h1>
+        <p className="text-sm sm:text-base lg:text-lg mb-6 max-w-xl text-neutral-extralight/95 font-body [text-shadow:_1px_1px_2px_rgba(0,0,0,0.7)]">
           {description}
         </p>
         <Button asChild size="lg" className="bg-brand-primary hover:bg-brand-primary/80 text-white font-semibold py-3 px-6 rounded-lg text-sm sm:text-base transition duration-300">

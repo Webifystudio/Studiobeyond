@@ -2,14 +2,14 @@
 "use client";
 
 import Link from 'next/link';
-import { useState, useEffect, type KeyboardEvent } from 'react'; // Added KeyboardEvent
-import { Search, Menu as MenuIcon, X, LogIn, LogOut } from 'lucide-react';
+import { useState, useEffect, type KeyboardEvent } from 'react';
+import { Search, Menu as MenuIcon, X, LogIn, LogOut, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-import { usePathname, useRouter } from 'next/navigation'; // useRouter imported
-import { auth, signOut, onAuthStateChanged, type User } from '@/lib/firebase';
+import { usePathname, useRouter } from 'next/navigation';
+import { auth, signOut, onAuthStateChanged, type User as FirebaseUser } from '@/lib/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -20,19 +20,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const navItems = [
+const navItemsBase = [
   { href: '/', label: 'Home' },
   { href: '/browse', label: 'Browse' },
-  { href: '/genres', label: 'Genres' },
-  { href: '/latest', label: 'Latest Updates' },
+  // { href: '/genres', label: 'Genres' }, // Removed
+  // { href: '/latest', label: 'Latest Updates' }, // Removed
   { href: '/popular', label: 'Popular' },
 ];
 
-export function Header() {
+interface HeaderProps {
+  transparentOnTop?: boolean;
+}
+
+export function Header({ transparentOnTop = false }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [searchTerm, setSearchTerm] = useState(''); // State for search input
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isScrolled, setIsScrolled] = useState(!transparentOnTop);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -48,6 +53,16 @@ export function Header() {
     setIsMobileMenuOpen(false); 
   }, [pathname]);
 
+  useEffect(() => {
+    if (!transparentOnTop) return;
+
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [transparentOnTop]);
+
   const handleLogout = async () => {
     await signOut();
     setCurrentUser(null);
@@ -62,12 +77,11 @@ export function Header() {
   };
 
   const handleSearch = (e: KeyboardEvent<HTMLInputElement> | React.MouseEvent<HTMLButtonElement>) => {
-    // Check if it's a KeyboardEvent and if 'Enter' was pressed, or if it's a MouseEvent (for a potential future search button)
     if ((e as KeyboardEvent<HTMLInputElement>).key === 'Enter' || e.type === 'click') {
       e.preventDefault();
       if (searchTerm.trim()) {
         router.push(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
-        setSearchTerm(''); // Optionally clear search term after navigation
+        setSearchTerm('');
       }
     }
   };
@@ -76,13 +90,20 @@ export function Header() {
      if (searchTerm.trim()) {
         router.push(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
         setSearchTerm(''); 
-        setIsMobileMenuOpen(false); // Close mobile menu
+        setIsMobileMenuOpen(false);
       }
   }
 
+  const currentNavItems = currentUser 
+    ? [...navItemsBase, { href: '/profile/settings', label: 'Profile' }]
+    : navItemsBase;
 
   return (
-    <header className="bg-neutral-medium shadow-lg sticky top-0 z-50">
+    <header className={cn(
+      "sticky top-0 z-50 transition-colors duration-300",
+      isScrolled ? "bg-neutral-medium shadow-lg" : "bg-transparent",
+      !transparentOnTop && "bg-neutral-medium shadow-lg" // Ensure non-transparent headers always have bg
+    )}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           <Link href="/" className="text-3xl font-bold text-brand-primary font-inter">
@@ -90,12 +111,13 @@ export function Header() {
           </Link>
 
           <nav className="hidden md:flex space-x-6 items-center">
-            {navItems.map((item) => (
+            {currentNavItems.map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
                 className={cn(
-                  "text-neutral-extralight hover:text-brand-primary transition duration-300 font-inter",
+                  "hover:text-brand-primary transition duration-300 font-inter",
+                  isScrolled || !transparentOnTop ? "text-neutral-extralight" : "text-white", // Adjust text color based on background
                   pathname === item.href && "text-brand-primary"
                 )}
               >
@@ -112,17 +134,24 @@ export function Header() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={handleSearch}
-                className="bg-neutral-light text-neutral-extralight placeholder-neutral-extralight/70 rounded-full py-2 px-4 pl-10 focus:outline-none focus:ring-2 focus:ring-brand-primary transition duration-300 w-40 lg:w-64 h-10"
+                className={cn(
+                  "text-neutral-extralight placeholder-neutral-extralight/70 rounded-full py-2 px-4 pl-10 focus:outline-none focus:ring-2 focus:ring-brand-primary transition duration-300 w-40 lg:w-64 h-10",
+                  isScrolled || !transparentOnTop ? "bg-neutral-light" : "bg-white/20 placeholder-white/70 text-white focus:bg-white/30"
+                )}
               />
-              <Search className="w-5 h-5 text-neutral-extralight absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none" />
+              <Search className={cn(
+                "w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none",
+                 isScrolled || !transparentOnTop ? "text-neutral-extralight" : "text-white/80"
+                )} 
+              />
             </div>
             
             {isLoadingAuth ? (
-              <div className="h-10 w-10 rounded-full bg-neutral-light animate-pulse" />
+              <div className={cn("h-10 w-10 rounded-full animate-pulse", isScrolled || !transparentOnTop ? "bg-neutral-light" : "bg-white/20")} />
             ) : currentUser ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
+                  <Button variant="ghost" className={cn("relative h-9 w-9 rounded-full p-0", isScrolled || !transparentOnTop ? "hover:bg-neutral-light" : "hover:bg-white/20")}>
                     <Avatar className="h-9 w-9">
                       <AvatarImage src={currentUser.photoURL || undefined} alt={currentUser.displayName || "User"} />
                       <AvatarFallback className="bg-brand-primary text-white">
@@ -144,7 +173,7 @@ export function Header() {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator className="bg-neutral-light" />
                   <DropdownMenuItem onClick={() => router.push('/profile/settings')} className="cursor-pointer hover:!bg-neutral-light focus:!bg-neutral-light">
-                    Profile Settings
+                    <UserIcon className="mr-2 h-4 w-4" /> Profile Settings
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleLogout} className="cursor-pointer hover:!bg-neutral-light focus:!bg-neutral-light text-red-400 hover:!text-red-300 focus:!text-red-300">
                     <LogOut className="mr-2 h-4 w-4" />
@@ -153,7 +182,9 @@ export function Header() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button variant="ghost" size="sm" asChild className="text-neutral-extralight hover:text-brand-primary hover:bg-neutral-light">
+              <Button variant="ghost" size="sm" asChild className={cn(
+                isScrolled || !transparentOnTop ? "text-neutral-extralight hover:text-brand-primary hover:bg-neutral-light" : "text-white hover:text-brand-primary hover:bg-white/20"
+                )}>
                 <Link href="/login">
                   <LogIn className="mr-2 h-4 w-4" /> Login
                 </Link>
@@ -162,7 +193,10 @@ export function Header() {
             
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild className="md:hidden">
-                <Button variant="ghost" size="icon" aria-label="Open menu" className="rounded-full hover:bg-neutral-light text-neutral-extralight hover:text-brand-primary p-0">
+                <Button variant="ghost" size="icon" aria-label="Open menu" className={cn(
+                  "rounded-full p-0",
+                   isScrolled || !transparentOnTop ? "text-neutral-extralight hover:text-brand-primary hover:bg-neutral-light" : "text-white hover:text-brand-primary hover:bg-white/20"
+                  )}>
                   {isMobileMenuOpen ? <X className="w-7 h-7" /> : <MenuIcon className="w-7 h-7" />}
                 </Button>
               </SheetTrigger>
@@ -187,7 +221,7 @@ export function Header() {
                         </SheetClose>
                    </div>
                   <nav className="flex flex-col space-y-1 items-center">
-                    {navItems.map((item) => (
+                    {currentNavItems.map((item) => (
                        <SheetClose asChild key={item.label}>
                           <Link
                               href={item.href}
@@ -200,7 +234,7 @@ export function Header() {
                           </Link>
                       </SheetClose>
                     ))}
-                    <div className="relative mt-4 w-full max-w-xs sm:hidden px-2">
+                    <div className="relative mt-4 w-full max-w-xs px-2">
                       <Input
                         type="text"
                         placeholder="Search manga..."
@@ -210,10 +244,6 @@ export function Header() {
                         className="bg-neutral-light text-neutral-extralight placeholder-neutral-extralight/70 rounded-full py-2 px-4 pl-10 focus:outline-none focus:ring-2 focus:ring-brand-primary transition duration-300 w-full h-10"
                       />
                       <Search className="w-5 h-5 text-neutral-extralight absolute left-5 top-1/2 transform -translate-y-1/2 pointer-events-none" />
-                       {/* Optional: Add a search button for mobile if Enter key is not intuitive enough */}
-                       {/* <Button onClick={handleMobileSearchSubmit} size="icon" className="absolute right-2 top-1/2 transform -translate-y-1/2">
-                           <Search className="w-5 h-5" />
-                       </Button> */}
                     </div>
                   </nav>
                 </div>

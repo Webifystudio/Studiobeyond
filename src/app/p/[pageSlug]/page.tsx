@@ -8,14 +8,23 @@ import Image from 'next/image';
 import { Home, Search, Share2, ThumbsUp, MessageCircle, Eye, ArrowLeft, X as CloseIcon, DownloadCloud, LayoutGrid, LayoutList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-// import { Switch } from '@/components/ui/switch'; // Already imported for reading mode
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { db, collection, query, where, getDocs, doc, updateDoc, increment, Timestamp, orderBy, auth, onAuthStateChanged, type User } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
+// Simple SVG icons as components for Telegram and Discord
+const TelegramIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M9.78 18.65l.28-4.23l7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3L3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.57c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>
+);
+
+const DiscordIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 245 240" fill="currentColor" {...props}><path d="M104.4 103.9c-5.7 0-10.2 5-10.2 11.1s4.6 11.1 10.2 11.1c5.7 0 10.2-5 10.2-11.1.1-6.1-4.5-11.1-10.2-11.1zM140.9 103.9c-5.7 0-10.2 5-10.2 11.1s4.6 11.1 10.2 11.1c5.7 0 10.2-5 10.2-11.1s-4.5-11.1-10.2-11.1z"/><path d="M189.5 20h-134C44.2 20 35 29.2 35 40.6v135.2c0 11.4 9.2 20.6 20.5 20.6h113.4l-5.3-18.5 12.8 11.9 12.1 11.2 21.5 19V40.6c0-11.4-9.2-20.6-20.5-20.6zm-38.6 130.6s-3.6-4.3-6.6-8.1c13.1-3.7 18.1-11.9 18.1-11.9-4.1 2.7-8 4.6-11.5 5.9-5 2.1-9.8 3.5-14.5 4.3-9.6 1.8-18.9 1.3-27.9-.2-7.1-1.1-13.9-3.3-20.2-6.3-.6-.3-1.2-.7-1.7-1.1-1.1-.9-2.2-1.9-3.2-3.1-1.1-1.3-2.1-2.7-3-4.2h-.1c-.1-.3-.3-.7-.4-1-.1-.5-.1-1-.2-1.5l-.1-.2c0-.2.1-.3.1-.4.1-.2.1-.3.2-.4.1-.3.2-.6.3-.9.2-.5.3-.9.5-1.4.2-.7.4-1.3.6-1.9.2-.6.5-1.2.7-1.8.2-.6.4-1.1.7-1.7.2-.5.5-1.1.7-1.6.2-.5.4-1.1.6-1.6.2-.5.4-1.1.7-1.6.2-.5.4-1 .6-1.5.2-.5.4-.9.6-1.4l.2-.5.2-.5.1-.3.2-.4.1-.3c.2-.4.3-.7.5-1.1.2-.4.3-.8.5-1.2.2-.4.3-.8.5-1.1.2-.3.4-.7.6-1 .2-.4.3-.7.5-1.1.2-.4.4-.7.6-1.1.2-.4.4-.7.6-1.1.2-.4.4-.7.6-1.1l.2-.4.1-.2.1-.2.1-.2.1-.2.1-.2c.2-.3.3-.6.5-.9.2-.3.3-.6.5-.8.1-.2.2-.4.3-.5l.1-.2.1-.2c.1-.2.1-.3.2-.4.1-.2.2-.3.3-.5.1-.2.2-.3.3-.4.1-.2.2-.3.3-.5.1-.2.2-.3.3-.4.1-.2.2-.3.3-.4l.1-.2.1-.2c.2-.3.3-.5.4-.8.1-.3.2-.5.3-.7.2-.3.3-.5.4-.8.2-.3.3-.5.4-.8.1-.2.2-.4.3-.6.1-.3.2-.5.3-.7.1-.3.2-.5.3-.7.1-.3.2-.5.3-.7.1-.3.2-.5.3-.7.1-.3.2-.5.3-.7.1-.2.2-.4.3-.6.1-.2.2-.4.3-.6.1-.2.2-.4.3-.6.1-.2.2-.4.3-.6s.1-.2.2-.4.1-.2.2-.4.1-.2.2-.3.1-.2.2-.3.1-.2.2-.3.1-.2.2-.3.1-.2.2-.3c.6-1.2 1.2-2.3 1.9-3.4.2-.4.3-.7.5-1.1.2-.4.3-.7.5-1.1.2-.4.4-.7.6-1.1.2-.4.4-.7.6-1.1zm-54.5 23.1c-13.4 0-24.3-11.9-24.3-26.5s10.9-26.5 24.3-26.5c13.4 0 24.3 11.9 24.3 26.5.1 14.6-10.8 26.5-24.2 26.5z"/></svg>
+);
+
 
 interface CustomPageData {
   id: string;
@@ -36,7 +45,8 @@ interface ChapterItem {
   id: string;
   name: string;
   imageUrls: string[];
-  downloadLink?: string;
+  telegramLink?: string;
+  discordLink?: string;
   createdAt: Timestamp;
 }
 
@@ -56,6 +66,7 @@ export default function PublicCustomPage() {
   const [selectedChapter, setSelectedChapter] = useState<ChapterItem | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [chapterForDownloadModal, setChapterForDownloadModal] = useState<ChapterItem | null>(null);
   const [readingMode, setReadingMode] = useState<'horizontal' | 'vertical'>('horizontal');
 
   const [showChapterSearch, setShowChapterSearch] = useState(false);
@@ -83,18 +94,17 @@ export default function PublicCustomPage() {
           const docSnap = querySnapshot.docs[0];
           const data = { id: docSnap.id, ...docSnap.data() } as CustomPageData;
           setPageData(data);
-          // Set initial reading mode from page data or default to horizontal
           setReadingMode(data.defaultReadingMode || 'horizontal');
 
 
           const viewedKey = `viewed-page-${data.id}`;
-          if (typeof window !== 'undefined' && !localStorage.getItem(viewedKey)) {
+          if (typeof window !== 'undefined' && !sessionStorage.getItem(viewedKey)) { // Use sessionStorage
             const pageDocRef = doc(db, 'customPages', docSnap.id);
             await updateDoc(pageDocRef, {
               views: increment(1)
             });
-            localStorage.setItem(viewedKey, 'true');
             setPageData(prev => prev ? { ...prev, views: (prev.views || 0) + 1 } : null);
+            sessionStorage.setItem(viewedKey, 'true');
           }
           
           fetchChapters(docSnap.id);
@@ -176,13 +186,18 @@ export default function PublicCustomPage() {
   const openChapterViewer = (chapter: ChapterItem) => {
     setSelectedChapter(chapter);
     setCurrentImageIndex(0);
-    // Set reading mode from page data when opening a chapter, or default if not set
     setReadingMode(pageData?.defaultReadingMode || 'horizontal');
   };
 
   const closeChapterViewer = () => {
     setSelectedChapter(null);
   };
+  
+  const openDownloadDialogForChapter = (chapter: ChapterItem) => {
+    setChapterForDownloadModal(chapter);
+    setIsDownloadModalOpen(true);
+  };
+
 
   const navigateImage = (direction: 'next' | 'prev') => {
     if (!selectedChapter || readingMode === 'vertical') return;
@@ -396,7 +411,7 @@ export default function PublicCustomPage() {
           )}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-white hover:text-brand-primary hover:bg-white/10" onClick={() => setShowChapterSearch(!showChapterSearch)}>
+              <Button variant="ghost" size="icon" className="text-white hover:text-brand-primary hover:bg-black/10 p-1.5 rounded-full" onClick={() => setShowChapterSearch(!showChapterSearch)}>
                 <Search className="h-5 w-5 sm:h-6 sm:w-6" />
               </Button>
             </TooltipTrigger>
@@ -406,7 +421,7 @@ export default function PublicCustomPage() {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-white hover:text-brand-primary hover:bg-white/10" onClick={handleShare}>
+              <Button variant="ghost" size="icon" className="text-white hover:text-brand-primary hover:bg-black/10 p-1.5 rounded-full" onClick={handleShare}>
                 <Share2 className="h-5 w-5 sm:h-6 sm:w-6" />
               </Button>
             </TooltipTrigger>
@@ -450,61 +465,66 @@ export default function PublicCustomPage() {
               {!pageData.description && !pageData.author && !pageData.category && (
                    <p className="text-neutral-extralight/70 font-body mb-8">No additional content available for this page yet.</p>
               )}
-              <div className="flex items-center space-x-2 md:space-x-3">
+              <div className="flex items-center space-x-0.5">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" className="text-white hover:text-brand-primary p-1.5 sm:p-2 group" onClick={() => handleInteraction('like this page')} aria-label="Like this page">
-                      <ThumbsUp className="h-4 w-4 sm:h-5 sm:w-5 group-hover:scale-110 transition-transform" />
+                    <Button variant="ghost" className="text-white hover:text-brand-primary p-1.5 group rounded-full" onClick={() => handleInteraction('like this page')} aria-label="Like this page">
+                      <ThumbsUp className="h-5 w-5 group-hover:scale-110 transition-transform" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="bg-neutral-medium text-neutral-extralight border-neutral-light"><p>Like</p></TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" className="text-white hover:text-brand-primary p-1.5 sm:p-2 group" onClick={() => handleInteraction('comment on this page')} aria-label="Comment on this page">
-                      <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 group-hover:scale-110 transition-transform" />
+                    <Button variant="ghost" className="text-white hover:text-brand-primary p-1.5 group rounded-full" onClick={() => handleInteraction('comment on this page')} aria-label="Comment on this page">
+                      <MessageCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="bg-neutral-medium text-neutral-extralight border-neutral-light"><p>Comment</p></TooltipContent>
                 </Tooltip>
                  <Dialog open={isDownloadModalOpen} onOpenChange={setIsDownloadModalOpen}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                        <DialogTrigger asChild>
-                            <Button variant="ghost" className="text-white hover:text-brand-primary p-1.5 sm:p-2 group" aria-label="Download chapters">
-                            <DownloadCloud className="h-4 w-4 sm:h-5 sm:w-5 group-hover:scale-110 transition-transform" />
-                            </Button>
-                        </DialogTrigger>
-                    </TooltipTrigger>
-                     <TooltipContent side="bottom" className="bg-neutral-medium text-neutral-extralight border-neutral-light"><p>Download</p></TooltipContent>
-                  </Tooltip>
-                  <DialogContent className="bg-neutral-medium border-neutral-light text-neutral-extralight sm:max-w-[425px]">
-                    <DialogHeader>
-                      <DialogTitle>Download Chapters</DialogTitle>
-                      <DialogDescription>
-                        Select a chapter to download if a link is available.
-                      </DialogDescription>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <DialogTrigger asChild>
+                                <Button variant="ghost" className="text-white hover:text-brand-primary p-1.5 group rounded-full" aria-label="Download options">
+                                <DownloadCloud className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                </Button>
+                            </DialogTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="bg-neutral-medium text-neutral-extralight border-neutral-light"><p>Download</p></TooltipContent>
+                    </Tooltip>
+                  <DialogContent className="bg-neutral-medium border-neutral-light text-neutral-extralight sm:max-w-md">
+                     <DialogHeader>
+                        <DialogTitle>Download Chapter: {chapterForDownloadModal?.name || 'Select Chapter First'}</DialogTitle>
+                        <DialogDescription>
+                            Choose your preferred download source.
+                        </DialogDescription>
                     </DialogHeader>
-                    <div className="max-h-[60vh] overflow-y-auto space-y-2 pr-2">
-                      {chapters.length > 0 ? chapters.map(chapter => (
-                        <div key={chapter.id} className="flex justify-between items-center p-2 bg-neutral-light rounded-md">
-                          <span className="truncate" title={chapter.name}>{chapter.name}</span>
-                          {chapter.downloadLink ? (
-                            <Button size="sm" asChild className="bg-brand-primary hover:bg-brand-primary/80 text-white">
-                              <a href={chapter.downloadLink} target="_blank" rel="noopener noreferrer">
-                                Download
-                              </a>
-                            </Button>
-                          ) : (
-                            <span className="text-xs text-neutral-extralight/60">No link</span>
-                          )}
+                    {chapterForDownloadModal ? (
+                        <div className="space-y-3 py-4">
+                            {chapterForDownloadModal.telegramLink ? (
+                                <Button asChild className="w-full bg-blue-500 hover:bg-blue-600 text-white">
+                                    <a href={chapterForDownloadModal.telegramLink} target="_blank" rel="noopener noreferrer">
+                                        <TelegramIcon className="mr-2 h-5 w-5"/> Download via Telegram
+                                    </a>
+                                </Button>
+                            ) : null}
+                            {chapterForDownloadModal.discordLink ? (
+                                <Button asChild className="w-full bg-indigo-500 hover:bg-indigo-600 text-white">
+                                    <a href={chapterForDownloadModal.discordLink} target="_blank" rel="noopener noreferrer">
+                                        <DiscordIcon className="mr-2 h-5 w-5"/> Download via Discord
+                                    </a>
+                                </Button>
+                            ) : null}
+                            {!chapterForDownloadModal.telegramLink && !chapterForDownloadModal.discordLink && (
+                                <p className="text-center text-neutral-extralight/70">No download links available for this chapter.</p>
+                            )}
                         </div>
-                      )) : (
-                        <p className="text-neutral-extralight/70">No chapters available for this page.</p>
-                      )}
-                    </div>
+                    ) : (
+                         <p className="text-center text-neutral-extralight/70 py-4">Please select a chapter first to see download options.</p>
+                    )}
                      <DialogClose asChild>
-                        <Button type="button" variant="outline" className="mt-4 w-full">
+                        <Button type="button" variant="outline" className="mt-2 w-full">
                             Close
                         </Button>
                     </DialogClose>
@@ -512,8 +532,8 @@ export default function PublicCustomPage() {
                 </Dialog>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <div className="flex items-center text-neutral-extralight/80 p-1.5 sm:p-2 cursor-default" aria-label={`${pageData.views ?? 0} views`}>
-                            <Eye className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-1.5" />
+                        <div className="flex items-center text-neutral-extralight/80 p-1.5 cursor-default rounded-full" aria-label={`${pageData.views ?? 0} views`}>
+                            <Eye className="h-5 w-5 mr-1 sm:mr-1.5" />
                             <span className="text-xs sm:text-sm">{pageData.views ?? 0}</span>
                         </div>
                     </TooltipTrigger>
@@ -529,22 +549,47 @@ export default function PublicCustomPage() {
             <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-white font-headline section-title border-l-4 border-brand-primary pl-3">Chapters</h2>
             {isLoadingChapters ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full bg-neutral-medium rounded-lg" />)}
+                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 w-full bg-neutral-medium rounded-lg" />)}
               </div>
             ) : filteredChapters.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {filteredChapters.map(chapter => (
                   <Card 
                     key={chapter.id} 
-                    className="bg-neutral-medium border-neutral-light hover:shadow-xl transition-shadow cursor-pointer hover:border-brand-primary/50"
-                    onClick={() => openChapterViewer(chapter)}
-                    tabIndex={0}
-                    onKeyDown={(e) => e.key === 'Enter' && openChapterViewer(chapter)}
+                    className="bg-neutral-medium border-neutral-light hover:shadow-xl transition-shadow duration-300 ease-in-out group"
                   >
-                    <CardHeader>
-                      <CardTitle className="text-lg text-brand-primary font-semibold truncate" title={chapter.name}>{chapter.name}</CardTitle>
-                      <CardDescription className="text-neutral-extralight/70">{chapter.imageUrls?.length || 0} Pages</CardDescription>
+                    <CardHeader className="p-4">
+                      <CardTitle 
+                        className="text-lg text-brand-primary font-semibold truncate group-hover:text-brand-primary/80 cursor-pointer" 
+                        title={chapter.name}
+                        onClick={() => openChapterViewer(chapter)}
+                        onKeyDown={(e) => e.key === 'Enter' && openChapterViewer(chapter)}
+                        tabIndex={0}
+                      >
+                        {chapter.name}
+                      </CardTitle>
+                      <CardDescription className="text-neutral-extralight/70 text-xs">{chapter.imageUrls?.length || 0} Pages</CardDescription>
                     </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                       <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full text-xs"
+                        onClick={() => openChapterViewer(chapter)}
+                       >
+                         Read Chapter
+                       </Button>
+                       {(chapter.telegramLink || chapter.discordLink) && (
+                         <Button 
+                            variant="secondary" 
+                            size="sm" 
+                            className="w-full text-xs mt-2 bg-accent/80 hover:bg-accent text-accent-foreground"
+                            onClick={() => openDownloadDialogForChapter(chapter)}
+                         >
+                            <DownloadCloud className="mr-1.5 h-3.5 w-3.5" /> Download Options
+                         </Button>
+                       )}
+                    </CardContent>
                   </Card>
                 ))}
               </div>
@@ -560,5 +605,3 @@ export default function PublicCustomPage() {
     </TooltipProvider>
   );
 }
-
-    

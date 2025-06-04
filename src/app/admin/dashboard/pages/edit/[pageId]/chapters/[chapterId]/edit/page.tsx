@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, PlusCircle, Trash2, UploadCloud } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, UploadCloud, Save } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { db, serverTimestamp, doc, getDoc, updateDoc, arrayUnion, arrayRemove, type Timestamp } from '@/lib/firebase';
 import Link from 'next/link';
@@ -16,7 +16,8 @@ import Image from 'next/image';
 interface ChapterData {
   name: string;
   imageUrls: string[];
-  downloadLink?: string;
+  telegramLink?: string; // New
+  discordLink?: string;  // New
   createdAt: Timestamp;
 }
 
@@ -31,9 +32,10 @@ export default function EditChapterImagesPage() {
   const [chapterDetails, setChapterDetails] = useState<ChapterData | null>(null);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [downloadUrl, setDownloadUrl] = useState('');
+  const [telegramUrl, setTelegramUrl] = useState('');
+  const [discordUrl, setDiscordUrl] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false); // For download link saving
+  const [isSavingLinks, setIsSavingLinks] = useState(false);
   const { toast } = useToast();
 
   const fetchChapterData = async () => {
@@ -45,7 +47,8 @@ export default function EditChapterImagesPage() {
       if (docSnap.exists()) {
         const data = docSnap.data() as ChapterData;
         setChapterDetails(data);
-        setDownloadUrl(data.downloadLink || '');
+        setTelegramUrl(data.telegramLink || '');
+        setDiscordUrl(data.discordLink || '');
       } else {
         toast({ title: "Error", description: "Chapter not found.", variant: "destructive" });
         router.push(`/admin/dashboard/pages/edit/${pageId}`);
@@ -99,16 +102,15 @@ export default function EditChapterImagesPage() {
       return;
     }
 
-    // If upload was successful, add the URL to Firestore
     try {
       const chapterRef = doc(db, 'customPages', pageId, 'chapters', chapterId);
       await updateDoc(chapterRef, {
         imageUrls: arrayUnion(imgbbUrl)
       });
       toast({ title: "Image Added", description: "Image added to chapter successfully." });
-      setSelectedImageFile(null); // Clear file input
+      setSelectedImageFile(null); 
       const fileInput = document.getElementById('chapterImageFile') as HTMLInputElement;
-      if(fileInput) fileInput.value = ''; // Reset file input visually
+      if(fileInput) fileInput.value = ''; 
       fetchChapterData(); 
     } catch (error: any) {
       console.error("Error adding image URL to chapter: ", error);
@@ -120,7 +122,8 @@ export default function EditChapterImagesPage() {
 
   const handleRemoveImage = async (imageUrlToRemove: string) => {
     if (!chapterDetails || !confirm("Are you sure you want to remove this image?")) return;
-    setIsSaving(true); // Re-use isSaving for this action as well, or use a new state
+    // Re-use isSavingLinks or use a dedicated state for image removal if operations can overlap
+    setIsSavingLinks(true); 
     try {
       const chapterRef = doc(db, 'customPages', pageId, 'chapters', chapterId);
       await updateDoc(chapterRef, {
@@ -132,25 +135,26 @@ export default function EditChapterImagesPage() {
       console.error("Error removing image from chapter: ", error);
       toast({ title: "Error", description: error.message || "Could not remove image.", variant: "destructive" });
     }
-    setIsSaving(false);
+    setIsSavingLinks(false);
   };
 
-  const handleSaveDownloadLink = async (e: FormEvent) => {
+  const handleSaveDownloadLinks = async (e: FormEvent) => {
     e.preventDefault();
     if (!chapterDetails) return;
-    setIsSaving(true);
+    setIsSavingLinks(true);
     try {
       const chapterRef = doc(db, 'customPages', pageId, 'chapters', chapterId);
       await updateDoc(chapterRef, {
-        downloadLink: downloadUrl.trim() || null 
+        telegramLink: telegramUrl.trim() || null,
+        discordLink: discordUrl.trim() || null,
       });
-      toast({ title: "Download Link Saved", description: "Download link updated successfully." });
+      toast({ title: "Download Links Saved", description: "Download links updated successfully." });
       fetchChapterData();
     } catch (error: any) {
-      console.error("Error saving download link: ", error);
-      toast({ title: "Error", description: error.message || "Could not save download link.", variant: "destructive" });
+      console.error("Error saving download links: ", error);
+      toast({ title: "Error", description: error.message || "Could not save download links.", variant: "destructive" });
     }
-    setIsSaving(false);
+    setIsSavingLinks(false);
   };
 
   if (isLoading || !chapterDetails) {
@@ -172,26 +176,37 @@ export default function EditChapterImagesPage() {
 
       <Card className="bg-neutral-medium border-neutral-light">
         <CardHeader>
-          <CardTitle className="text-lg md:text-xl text-white font-headline">Chapter Download Link</CardTitle>
+          <CardTitle className="text-lg md:text-xl text-white font-headline">Chapter Download Links</CardTitle>
           <CardDescription className="text-neutral-extralight/80">
-            Provide an optional direct download link for this chapter.
+            Provide optional direct download links for this chapter (e.g., Telegram, Discord).
           </CardDescription>
         </CardHeader>
-        <form onSubmit={handleSaveDownloadLink}>
+        <form onSubmit={handleSaveDownloadLinks}>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="downloadUrl" className="text-neutral-extralight">Download URL (Optional)</Label>
+              <Label htmlFor="telegramUrl" className="text-neutral-extralight">Telegram Link (Optional)</Label>
               <Input
-                id="downloadUrl"
+                id="telegramUrl"
                 type="url"
-                value={downloadUrl}
-                onChange={(e) => setDownloadUrl(e.target.value)}
-                placeholder="https://example.com/download/chapter.zip"
+                value={telegramUrl}
+                onChange={(e) => setTelegramUrl(e.target.value)}
+                placeholder="https://t.me/yourchannel/message_id"
                 className="bg-neutral-light border-neutral-light text-neutral-extralight focus:ring-brand-primary"
               />
             </div>
-            <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white" disabled={isSaving}>
-              {isSaving ? 'Saving Link...' : 'Save Download Link'}
+            <div>
+              <Label htmlFor="discordUrl" className="text-neutral-extralight">Discord Link (Optional)</Label>
+              <Input
+                id="discordUrl"
+                type="url"
+                value={discordUrl}
+                onChange={(e) => setDiscordUrl(e.target.value)}
+                placeholder="https://discord.com/channels/server_id/channel_id/message_id"
+                className="bg-neutral-light border-neutral-light text-neutral-extralight focus:ring-brand-primary"
+              />
+            </div>
+            <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white" disabled={isSavingLinks}>
+              <Save className="mr-2 h-4 w-4" /> {isSavingLinks ? 'Saving Links...' : 'Save Download Links'}
             </Button>
           </CardContent>
         </form>
@@ -264,7 +279,7 @@ export default function EditChapterImagesPage() {
                     className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity bg-red-600/80 hover:bg-red-500/90"
                     onClick={() => handleRemoveImage(url)}
                     aria-label="Remove image"
-                    disabled={isSaving || isUploading} // Disable if any operation is in progress
+                    disabled={isSavingLinks || isUploading} 
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -280,5 +295,3 @@ export default function EditChapterImagesPage() {
     </div>
   );
 }
-
-    
