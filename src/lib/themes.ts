@@ -73,7 +73,7 @@ export const themes: Theme[] = [
       muted: "0 0% 96.1%",
       mutedForeground: "215.4 16.3% 46.9%", // #78716C
       accent: "32 95% 60%", // Orange accent
-      accentForeground: "0 0% 98%",
+      accentForeground: "20 80% 15%", // Dark Brown/Black for text on orange
       destructive: "0 84.2% 60.2%",
       destructiveForeground: "0 0% 98%",
       border: "0 0% 89.8%", // #E5E5E5
