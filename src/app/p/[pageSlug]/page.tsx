@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Simple SVG icons as components for Telegram and Discord
 const TelegramIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -65,8 +66,11 @@ export default function PublicCustomPage() {
   
   const [selectedChapter, setSelectedChapter] = useState<ChapterItem | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
-  const [chapterForDownloadModal, setChapterForDownloadModal] = useState<ChapterItem | null>(null);
+  
+  const [isChapterSelectForDownloadModalOpen, setIsChapterSelectForDownloadModalOpen] = useState(false);
+  const [chapterForDownloadLinks, setChapterForDownloadLinks] = useState<ChapterItem | null>(null);
+  const [isDownloadLinksModalOpen, setIsDownloadLinksModalOpen] = useState(false);
+
   const [readingMode, setReadingMode] = useState<'horizontal' | 'vertical'>('horizontal');
 
   const [showChapterSearch, setShowChapterSearch] = useState(false);
@@ -98,7 +102,7 @@ export default function PublicCustomPage() {
 
 
           const viewedKey = `viewed-page-${data.id}`;
-          if (typeof window !== 'undefined' && !sessionStorage.getItem(viewedKey)) { // Use sessionStorage
+          if (typeof window !== 'undefined' && !sessionStorage.getItem(viewedKey)) { 
             const pageDocRef = doc(db, 'customPages', docSnap.id);
             await updateDoc(pageDocRef, {
               views: increment(1)
@@ -193,9 +197,10 @@ export default function PublicCustomPage() {
     setSelectedChapter(null);
   };
   
-  const openDownloadDialogForChapter = (chapter: ChapterItem) => {
-    setChapterForDownloadModal(chapter);
-    setIsDownloadModalOpen(true);
+  const handleChapterSelectForDownload = (chapter: ChapterItem) => {
+    setChapterForDownloadLinks(chapter);
+    setIsChapterSelectForDownloadModalOpen(false);
+    setIsDownloadLinksModalOpen(true);
   };
 
 
@@ -482,54 +487,85 @@ export default function PublicCustomPage() {
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="bg-neutral-medium text-neutral-extralight border-neutral-light"><p>Comment</p></TooltipContent>
                 </Tooltip>
-                 <Dialog open={isDownloadModalOpen} onOpenChange={setIsDownloadModalOpen}>
+                
+                {/* Global Download Button to trigger Chapter Selection Modal */}
+                <Dialog open={isChapterSelectForDownloadModalOpen} onOpenChange={setIsChapterSelectForDownloadModalOpen}>
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <DialogTrigger asChild>
                                 <Button variant="ghost" className="text-white hover:text-brand-primary p-1.5 group rounded-full" aria-label="Download options">
-                                <DownloadCloud className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                    <DownloadCloud className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                 </Button>
                             </DialogTrigger>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className="bg-neutral-medium text-neutral-extralight border-neutral-light"><p>Download</p></TooltipContent>
+                        <TooltipContent side="bottom" className="bg-neutral-medium text-neutral-extralight border-neutral-light"><p>Download Chapter</p></TooltipContent>
                     </Tooltip>
                   <DialogContent className="bg-neutral-medium border-neutral-light text-neutral-extralight sm:max-w-md">
                      <DialogHeader>
-                        <DialogTitle>Download Chapter: {chapterForDownloadModal?.name || 'Select Chapter First'}</DialogTitle>
+                        <DialogTitle>Select Chapter to Download</DialogTitle>
                         <DialogDescription>
-                            Choose your preferred download source.
+                            Choose a chapter from the list below to see download options.
                         </DialogDescription>
                     </DialogHeader>
-                    {chapterForDownloadModal ? (
-                        <div className="space-y-3 py-4">
-                            {chapterForDownloadModal.telegramLink ? (
-                                <Button asChild className="w-full bg-blue-500 hover:bg-blue-600 text-white">
-                                    <a href={chapterForDownloadModal.telegramLink} target="_blank" rel="noopener noreferrer">
-                                        <TelegramIcon className="mr-2 h-5 w-5"/> Download via Telegram
-                                    </a>
-                                </Button>
-                            ) : null}
-                            {chapterForDownloadModal.discordLink ? (
-                                <Button asChild className="w-full bg-indigo-500 hover:bg-indigo-600 text-white">
-                                    <a href={chapterForDownloadModal.discordLink} target="_blank" rel="noopener noreferrer">
-                                        <DiscordIcon className="mr-2 h-5 w-5"/> Download via Discord
-                                    </a>
-                                </Button>
-                            ) : null}
-                            {!chapterForDownloadModal.telegramLink && !chapterForDownloadModal.discordLink && (
-                                <p className="text-center text-neutral-extralight/70">No download links available for this chapter.</p>
-                            )}
+                    <ScrollArea className="max-h-[60vh] my-4">
+                        <div className="space-y-2 pr-4">
+                        {chapters.length > 0 ? chapters.map(ch => (
+                            <Button 
+                                key={ch.id} 
+                                variant="outline" 
+                                className="w-full justify-start"
+                                onClick={() => handleChapterSelectForDownload(ch)}
+                            >
+                                {ch.name}
+                            </Button>
+                        )) : <p className="text-neutral-extralight/70 text-center">No chapters available.</p>}
                         </div>
-                    ) : (
-                         <p className="text-center text-neutral-extralight/70 py-4">Please select a chapter first to see download options.</p>
-                    )}
+                    </ScrollArea>
                      <DialogClose asChild>
-                        <Button type="button" variant="outline" className="mt-2 w-full">
-                            Close
+                        <Button type="button" variant="secondary" className="mt-2 w-full">
+                            Cancel
                         </Button>
                     </DialogClose>
                   </DialogContent>
                 </Dialog>
+
+                {/* Download Links Modal (Telegram/Discord) */}
+                <Dialog open={isDownloadLinksModalOpen} onOpenChange={setIsDownloadLinksModalOpen}>
+                    <DialogContent className="bg-neutral-medium border-neutral-light text-neutral-extralight sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Download: {chapterForDownloadLinks?.name || 'Chapter'}</DialogTitle>
+                            <DialogDescription>
+                                Choose your preferred download source.
+                            </DialogDescription>
+                        </DialogHeader>
+                        {chapterForDownloadLinks && (chapterForDownloadLinks.telegramLink || chapterForDownloadLinks.discordLink) ? (
+                            <div className="space-y-3 py-4">
+                                {chapterForDownloadLinks.telegramLink && (
+                                    <Button asChild className="w-full bg-blue-500 hover:bg-blue-600 text-white">
+                                        <a href={chapterForDownloadLinks.telegramLink} target="_blank" rel="noopener noreferrer">
+                                            <TelegramIcon className="mr-2 h-5 w-5"/> Download via Telegram
+                                        </a>
+                                    </Button>
+                                )}
+                                {chapterForDownloadLinks.discordLink && (
+                                    <Button asChild className="w-full bg-indigo-500 hover:bg-indigo-600 text-white">
+                                        <a href={chapterForDownloadLinks.discordLink} target="_blank" rel="noopener noreferrer">
+                                            <DiscordIcon className="mr-2 h-5 w-5"/> Download via Discord
+                                        </a>
+                                    </Button>
+                                )}
+                            </div>
+                        ) : (
+                             <p className="text-center text-neutral-extralight/70 py-4">No download links available for this chapter.</p>
+                        )}
+                        <DialogClose asChild>
+                            <Button type="button" variant="outline" className="mt-2 w-full">
+                                Close
+                            </Button>
+                        </DialogClose>
+                    </DialogContent>
+                </Dialog>
+
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <div className="flex items-center text-neutral-extralight/80 p-1.5 cursor-default rounded-full" aria-label={`${pageData.views ?? 0} views`}>
@@ -549,7 +585,7 @@ export default function PublicCustomPage() {
             <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-white font-headline section-title border-l-4 border-brand-primary pl-3">Chapters</h2>
             {isLoadingChapters ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 w-full bg-neutral-medium rounded-lg" />)}
+                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 w-full bg-neutral-medium rounded-lg" />)}
               </div>
             ) : filteredChapters.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -558,38 +594,22 @@ export default function PublicCustomPage() {
                     key={chapter.id} 
                     className="bg-neutral-medium border-neutral-light hover:shadow-xl transition-shadow duration-300 ease-in-out group"
                   >
-                    <CardHeader className="p-4">
+                    <CardHeader className="p-4 cursor-pointer hover:bg-neutral-light/30 rounded-t-lg" 
+                      onClick={() => openChapterViewer(chapter)}
+                      onKeyDown={(e) => e.key === 'Enter' && openChapterViewer(chapter)}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Read chapter ${chapter.name}`}
+                    >
                       <CardTitle 
-                        className="text-lg text-brand-primary font-semibold truncate group-hover:text-brand-primary/80 cursor-pointer" 
+                        className="text-lg text-brand-primary font-semibold truncate" 
                         title={chapter.name}
-                        onClick={() => openChapterViewer(chapter)}
-                        onKeyDown={(e) => e.key === 'Enter' && openChapterViewer(chapter)}
-                        tabIndex={0}
                       >
                         {chapter.name}
                       </CardTitle>
-                      <CardDescription className="text-neutral-extralight/70 text-xs">{chapter.imageUrls?.length || 0} Pages</CardDescription>
+                      {/* Page count removed here */}
                     </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                       <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-full text-xs"
-                        onClick={() => openChapterViewer(chapter)}
-                       >
-                         Read Chapter
-                       </Button>
-                       {(chapter.telegramLink || chapter.discordLink) && (
-                         <Button 
-                            variant="secondary" 
-                            size="sm" 
-                            className="w-full text-xs mt-2 bg-accent/80 hover:bg-accent text-accent-foreground"
-                            onClick={() => openDownloadDialogForChapter(chapter)}
-                         >
-                            <DownloadCloud className="mr-1.5 h-3.5 w-3.5" /> Download Options
-                         </Button>
-                       )}
-                    </CardContent>
+                    {/* Removed "Read Chapter" and individual "Download Options" buttons from card content */}
                   </Card>
                 ))}
               </div>
@@ -605,3 +625,6 @@ export default function PublicCustomPage() {
     </TooltipProvider>
   );
 }
+
+
+    
