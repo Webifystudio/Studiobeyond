@@ -35,7 +35,7 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isScrolled, setIsScrolled] = useState(!transparentOnTop);
+  const [isScrolled, setIsScrolled] = useState(false); // Only used if transparentOnTop is false
   const pathname = usePathname();
   const router = useRouter();
 
@@ -52,11 +52,13 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
   }, [pathname]);
 
   useEffect(() => {
-    if (!transparentOnTop) {
-      setIsScrolled(true); 
+    if (transparentOnTop) {
+      // For always transparent header, scroll state doesn't change background
+      setIsScrolled(false); // Keep it false so dynamic classes for text/icons use "transparent" state
       return;
     }
 
+    // Original scroll logic for non-transparentOnTop headers
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
     };
@@ -100,11 +102,15 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
     ? [...navItemsBase, { href: '/profile/settings', label: 'Profile' }]
     : navItemsBase;
 
-  const headerBgClass = (transparentOnTop && !isScrolled) ? "bg-transparent" : "bg-neutral-medium shadow-lg";
-  const textColorClass = (transparentOnTop && !isScrolled) ? "text-white" : "text-neutral-extralight";
-  const searchBgClass = (transparentOnTop && !isScrolled) ? "bg-white/20 placeholder-white/70 text-white focus:bg-white/30" : "bg-neutral-light text-neutral-extralight placeholder-neutral-extralight/70";
-  const searchIconColorClass = (transparentOnTop && !isScrolled) ? "text-white/80" : "text-neutral-extralight";
-  const userButtonHoverClass = (transparentOnTop && !isScrolled) ? "hover:bg-white/20" : "hover:bg-neutral-light";
+  // Determine classes based on transparency and scroll state
+  const isEffectivelyTransparent = transparentOnTop; // Always transparent if transparentOnTop is true
+
+  const headerBgClass = isEffectivelyTransparent ? "bg-transparent" : "bg-neutral-medium shadow-lg";
+  const textColorClass = isEffectivelyTransparent ? "text-white" : "text-neutral-extralight";
+  const searchBgClass = isEffectivelyTransparent ? "bg-white/20 placeholder-white/70 text-white focus:bg-white/30" : "bg-neutral-light text-neutral-extralight placeholder-neutral-extralight/70";
+  const searchIconColorClass = isEffectivelyTransparent ? "text-white/80" : "text-neutral-extralight";
+  const userButtonHoverClass = isEffectivelyTransparent ? "hover:bg-white/20" : "hover:bg-neutral-light";
+  const mobileMenuBgClass = isEffectivelyTransparent ? "bg-black/80 backdrop-blur-md" : "bg-neutral-medium";
 
 
   return (
@@ -155,7 +161,7 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
             </div>
             
             {isLoadingAuth ? (
-              <div className={cn("h-10 w-10 rounded-full animate-pulse", (transparentOnTop && !isScrolled) ? "bg-white/20" : "bg-neutral-light")} />
+              <div className={cn("h-10 w-10 rounded-full animate-pulse", isEffectivelyTransparent ? "bg-white/20" : "bg-neutral-light")} />
             ) : currentUser ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -213,7 +219,10 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
               </SheetTrigger>
               <SheetContent 
                 side="top" 
-                className="bg-neutral-medium text-neutral-extralight p-0 h-auto border-b-neutral-light"
+                className={cn(
+                  "text-neutral-extralight p-0 h-auto border-b-neutral-light",
+                  mobileMenuBgClass
+                  )}
                 onInteractOutside={(e) => {
                     if ((e.target as HTMLElement)?.closest('[aria-label="Open menu"]')) {
                         e.preventDefault();
@@ -226,7 +235,7 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
                             BEYOND SCANS
                         </Link>
                         <SheetClose asChild>
-                            <Button variant="ghost" size="icon" aria-label="Close menu" className="rounded-full hover:bg-neutral-light text-neutral-extralight hover:text-brand-primary p-0">
+                            <Button variant="ghost" size="icon" aria-label="Close menu" className={cn("rounded-full text-neutral-extralight hover:text-brand-primary p-0", isEffectivelyTransparent ? "hover:bg-white/10" : "hover:bg-neutral-light")}>
                                 <X className="w-7 h-7" />
                             </Button>
                         </SheetClose>
@@ -237,8 +246,9 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
                           <Link
                               href={item.href}
                               className={cn(
-                                  "block py-3 px-4 rounded-md text-neutral-extralight hover:bg-neutral-light hover:text-brand-primary transition duration-300 font-inter text-lg w-full text-center",
-                                  pathname === item.href && "bg-neutral-light text-brand-primary"
+                                  "block py-3 px-4 rounded-md text-neutral-extralight hover:text-brand-primary transition duration-300 font-inter text-lg w-full text-center",
+                                  isEffectivelyTransparent ? "hover:bg-white/10" : "hover:bg-neutral-light",
+                                  pathname === item.href && (isEffectivelyTransparent ? "bg-white/10 text-brand-primary" : "bg-neutral-light text-brand-primary")
                               )}
                           >
                           {item.label}
@@ -252,9 +262,12 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         onKeyDown={(e) => { if (e.key === 'Enter') handleMobileSearchSubmit(); }}
-                        className="bg-neutral-light text-neutral-extralight placeholder-neutral-extralight/70 rounded-full py-2 px-4 pl-10 focus:outline-none focus:ring-2 focus:ring-brand-primary transition duration-300 w-full h-10"
+                        className={cn(
+                           "rounded-full py-2 px-4 pl-10 focus:outline-none focus:ring-2 focus:ring-brand-primary transition duration-300 w-full h-10",
+                           searchBgClass
+                           )}
                       />
-                      <Search className="w-5 h-5 text-neutral-extralight absolute left-5 top-1/2 transform -translate-y-1/2 pointer-events-none" />
+                      <Search className={cn("w-5 h-5 absolute left-5 top-1/2 transform -translate-y-1/2 pointer-events-none", searchIconColorClass)} />
                     </div>
                   </nav>
                 </div>
