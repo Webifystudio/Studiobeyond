@@ -8,7 +8,7 @@ import Image from 'next/image';
 import { Home, Search, Share2, ThumbsUp, MessageCircle, Eye, ArrowLeft, X as CloseIcon, DownloadCloud, LayoutGrid, LayoutList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
+// import { Switch } from '@/components/ui/switch'; // Already imported for reading mode
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { db, collection, query, where, getDocs, doc, updateDoc, increment, Timestamp, orderBy, auth, onAuthStateChanged, type User } from '@/lib/firebase';
@@ -28,6 +28,7 @@ interface CustomPageData {
   landingImageUrl?: string;
   dataAiHint?: string;
   views?: number;
+  defaultReadingMode?: 'horizontal' | 'vertical';
   createdAt: Timestamp;
 }
 
@@ -82,6 +83,9 @@ export default function PublicCustomPage() {
           const docSnap = querySnapshot.docs[0];
           const data = { id: docSnap.id, ...docSnap.data() } as CustomPageData;
           setPageData(data);
+          // Set initial reading mode from page data or default to horizontal
+          setReadingMode(data.defaultReadingMode || 'horizontal');
+
 
           const viewedKey = `viewed-page-${data.id}`;
           if (typeof window !== 'undefined' && !localStorage.getItem(viewedKey)) {
@@ -132,9 +136,9 @@ export default function PublicCustomPage() {
     if (!currentUser) {
       toast({
         title: "Login Required",
-        description: `You need to be logged in to ${action}.`,
-        action: <Button variant="outline" size="sm" onClick={() => router.push('/login')}>Login</Button>,
-        duration: 5000,
+        description: `You need to be logged in to ${action}. Redirecting to login...`,
+        variant: "default",
+        duration: 3000,
       });
       router.push('/login');
       return;
@@ -156,6 +160,7 @@ export default function PublicCustomPage() {
         toast({title: "Shared successfully!"});
       } catch (error) {
         console.error('Error sharing:', error);
+        toast({title: "Share Canceled or Failed", description: "Could not share at this moment.", variant:"default"});
       }
     } else {
          try {
@@ -171,7 +176,8 @@ export default function PublicCustomPage() {
   const openChapterViewer = (chapter: ChapterItem) => {
     setSelectedChapter(chapter);
     setCurrentImageIndex(0);
-    setReadingMode('horizontal'); // Reset to horizontal when opening new chapter
+    // Set reading mode from page data when opening a chapter, or default if not set
+    setReadingMode(pageData?.defaultReadingMode || 'horizontal');
   };
 
   const closeChapterViewer = () => {
@@ -308,14 +314,14 @@ export default function PublicCustomPage() {
           {readingMode === 'horizontal' && totalImages > 0 && currentImageUrl && (
              <div className="flex items-center justify-center h-full">
                 <Image
-                key={currentImageUrl} // Re-mount image on URL change
+                key={currentImageUrl} 
                 src={currentImageUrl}
                 alt={`Page ${currentImageIndex + 1} of ${selectedChapter.name}`}
                 width={800} 
                 height={1200} 
                 className="max-w-full max-h-full object-contain"
                 data-ai-hint="manga page"
-                priority={currentImageIndex < 2} // Prioritize first few images
+                priority={currentImageIndex < 2} 
                 onError={(e) => (e.currentTarget.src = 'https://placehold.co/800x1200/000000/FFFFFF?text=Error+Loading+Image')}
                 />
             </div>
@@ -331,7 +337,7 @@ export default function PublicCustomPage() {
                   height={1080} 
                   className="object-contain w-full h-auto max-w-screen-md shadow-md"
                   data-ai-hint="manga page scroll"
-                  loading={index > 2 ? "lazy" : "eager"} // Lazy load images after the first few
+                  loading={index > 2 ? "lazy" : "eager"} 
                   onError={(e) => (e.currentTarget.src = 'https://placehold.co/720x1080/000000/FFFFFF?text=Error+Loading+Image')}
                 />
               ))}
@@ -485,9 +491,9 @@ export default function PublicCustomPage() {
                           <span className="truncate" title={chapter.name}>{chapter.name}</span>
                           {chapter.downloadLink ? (
                             <Button size="sm" asChild className="bg-brand-primary hover:bg-brand-primary/80 text-white">
-                              <Link href={chapter.downloadLink} target="_blank" rel="noopener noreferrer">
+                              <a href={chapter.downloadLink} target="_blank" rel="noopener noreferrer">
                                 Download
-                              </Link>
+                              </a>
                             </Button>
                           ) : (
                             <span className="text-xs text-neutral-extralight/60">No link</span>
@@ -518,7 +524,7 @@ export default function PublicCustomPage() {
           </div>
         </section>
         
-        {(filteredChapters.length > 0 || chapterSearchTerm) && (
+        {(filteredChapters.length > 0 || chapterSearchTerm || isLoadingChapters) && (
           <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-neutral-dark">
             <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-white font-headline section-title border-l-4 border-brand-primary pl-3">Chapters</h2>
             {isLoadingChapters ? (
@@ -542,8 +548,10 @@ export default function PublicCustomPage() {
                   </Card>
                 ))}
               </div>
-            ) : (
+            ) : chapterSearchTerm ? (
                  <p className="text-neutral-extralight/70">No chapters found matching your search "{chapterSearchTerm}".</p>
+            ) : (
+                 <p className="text-neutral-extralight/70">No chapters have been added to this page yet.</p>
             )}
           </section>
         )}
@@ -552,7 +560,5 @@ export default function PublicCustomPage() {
     </TooltipProvider>
   );
 }
-
-    
 
     

@@ -14,6 +14,8 @@ import { db, serverTimestamp } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, Timestamp, addDoc, collection, getDocs, deleteDoc, query, orderBy } from 'firebase/firestore';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 
 interface CustomPageData {
   pageName: string;
@@ -25,6 +27,7 @@ interface CustomPageData {
   landingImageUrl: string;
   dataAiHint: string;
   views: number;
+  defaultReadingMode?: 'horizontal' | 'vertical';
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }
@@ -46,6 +49,7 @@ const initialPageDetails: CustomPageData = {
   landingImageUrl: '',
   dataAiHint: '',
   views: 0,
+  defaultReadingMode: 'horizontal',
 };
 
 const IMGBB_API_KEY = "2bb2346a6a907388d8a3b0beac2bca86";
@@ -73,7 +77,12 @@ export default function EditCustomPage() {
           const pageRef = doc(db, 'customPages', pageId);
           const docSnap = await getDoc(pageRef);
           if (docSnap.exists()) {
-            setPageDetails(docSnap.data() as CustomPageData);
+            const data = docSnap.data() as CustomPageData;
+            setPageDetails({
+              ...initialPageDetails, // Ensure all fields have defaults
+              ...data,
+              defaultReadingMode: data.defaultReadingMode || 'horizontal', // Set default if undefined
+            });
           } else {
             toast({ title: "Error", description: "Page not found.", variant: "destructive" });
             router.push('/admin/dashboard/pages');
@@ -109,6 +118,10 @@ export default function EditCustomPage() {
     const { name, value } = e.target;
     setPageDetails(prev => ({ ...prev, [name]: value }));
   };
+  
+  const handleReadingModeChange = (value: 'horizontal' | 'vertical') => {
+    setPageDetails(prev => ({ ...prev, defaultReadingMode: value }));
+  };
 
   const handleLandingImageFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -138,6 +151,8 @@ export default function EditCustomPage() {
         setPageDetails(prev => ({ ...prev, landingImageUrl: result.data.display_url }));
         toast({ title: "Landing Image Uploaded", description: "Image successfully uploaded." });
         setSelectedLandingImageFile(null);
+        const fileInput = document.getElementById('landingImageFile') as HTMLInputElement;
+        if (fileInput) fileInput.value = ''; 
       } else {
         throw new Error(result.error?.message || 'ImgBB upload failed');
       }
@@ -176,6 +191,7 @@ export default function EditCustomPage() {
       await addDoc(chaptersRef, {
         name: newChapterName.trim(),
         imageUrls: [],
+        downloadLink: "", // Initialize download link
         createdAt: serverTimestamp(),
       });
       toast({ title: "Chapter Added", description: `Chapter "${newChapterName}" added.` });
@@ -187,10 +203,10 @@ export default function EditCustomPage() {
     }
   };
 
-  const handleDeleteChapter = async (chapterId: string, chapterName: string) => {
+  const handleDeleteChapter = async (chapterIdToDelete: string, chapterName: string) => {
     if (!confirm(`Are you sure you want to delete chapter "${chapterName}"? This will also delete all its images.`)) return;
     try {
-      const chapterRef = doc(db, 'customPages', pageId, 'chapters', chapterId);
+      const chapterRef = doc(db, 'customPages', pageId, 'chapters', chapterIdToDelete);
       await deleteDoc(chapterRef);
       toast({ title: "Chapter Deleted", description: `Chapter "${chapterName}" deleted.` });
       fetchChapters();
@@ -250,6 +266,18 @@ export default function EditCustomPage() {
                     <Label htmlFor="category" className="text-neutral-extralight">Category (Optional)</Label>
                     <Input id="category" name="category" type="text" value={pageDetails.category} onChange={handleChange} placeholder="e.g., Featured, Announcement" className="bg-neutral-light text-neutral-extralight" />
                 </div>
+            </div>
+            <div>
+              <Label htmlFor="defaultReadingMode" className="text-neutral-extralight">Default Chapter Reading Style</Label>
+              <Select value={pageDetails.defaultReadingMode || 'horizontal'} onValueChange={handleReadingModeChange}>
+                <SelectTrigger className="w-full bg-neutral-light border-neutral-light text-neutral-extralight focus:ring-brand-primary">
+                  <SelectValue placeholder="Select default reading mode" />
+                </SelectTrigger>
+                <SelectContent className="bg-neutral-light text-neutral-extralight border-neutral-medium">
+                  <SelectItem value="horizontal" className="hover:bg-neutral-medium focus:bg-neutral-medium">Horizontal (Paginated)</SelectItem>
+                  <SelectItem value="vertical" className="hover:bg-neutral-medium focus:bg-neutral-medium">Vertical (Scroll)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="landingImageFile" className="text-neutral-extralight">Landing Image</Label>
