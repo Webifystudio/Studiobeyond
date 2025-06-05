@@ -9,22 +9,29 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, List, Trash2, ExternalLink, UploadCloud } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { db, serverTimestamp } from '@/lib/firebase';
-import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, Timestamp } from 'firebase/firestore';
+import { db, serverTimestamp, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, Timestamp } from '@/lib/firebase';
 import Image from 'next/image';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Manga {
   id: string;
   title: string;
-  description: string;
+  description:string;
   chapters: number;
   status: string;
   imageUrl: string;
-  categoryNames?: string[]; // For storing assigned category names
+  categoryNames?: string[];
   dataAiHint?: string;
   externalReadLink?: string;
+  sectionId?: string; // Added for assigning to a custom homepage section
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+interface Section {
+  id: string;
+  name: string;
+  slug: string;
 }
 
 const initialMangaDetails = {
@@ -35,6 +42,7 @@ const initialMangaDetails = {
   imageUrl: '',
   dataAiHint: '',
   externalReadLink: '',
+  selectedSectionId: '', // Added for the form state
 };
 
 const IMGBB_API_KEY = "2bb2346a6a907388d8a3b0beac2bca86"; 
@@ -46,6 +54,10 @@ export default function ManageMangasPage() {
   const [isSubmittingManga, setIsSubmittingManga] = useState(false); 
   const [selectedCoverFile, setSelectedCoverFile] = useState<File | null>(null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
+  
+  const [allSections, setAllSections] = useState<Section[]>([]);
+  const [isLoadingSections, setIsLoadingSections] = useState(true);
+  
   const { toast } = useToast();
 
   const fetchMangas = async () => {
@@ -66,13 +78,37 @@ export default function ManageMangasPage() {
     setIsLoading(false);
   };
 
+  const fetchSections = async () => {
+    setIsLoadingSections(true);
+    try {
+      const sectionsCollection = collection(db, 'sections');
+      const q = query(sectionsCollection, orderBy('name', 'asc'));
+      const querySnapshot = await getDocs(q);
+      const sectionsList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        name: doc.data().name,
+        slug: doc.data().slug,
+      } as Section));
+      setAllSections(sectionsList);
+    } catch (error) {
+      console.error("Error fetching sections: ", error);
+      toast({ title: "Error", description: "Could not fetch sections.", variant: "destructive" });
+    }
+    setIsLoadingSections(false);
+  };
+
   useEffect(() => {
     fetchMangas();
+    fetchSections();
   }, []);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setMangaDetails(prev => ({ ...prev, [name]: value }));
+  };
+  
+  const handleSectionChange = (value: string) => {
+    setMangaDetails(prev => ({ ...prev, selectedSectionId: value }));
   };
 
   const handleCoverFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -124,13 +160,13 @@ export default function ManageMangasPage() {
     
     setIsSubmittingManga(true);
     try {
-      const dataToSave: Partial<Manga> & { createdAt: any, updatedAt: any } = { // Using Partial for optional fields
+      const dataToSave: Partial<Manga> & { createdAt: any, updatedAt: any } = { 
         title: mangaDetails.title.trim(),
         description: mangaDetails.description.trim(),
         chapters: parseInt(mangaDetails.chapters) || 0,
         status: mangaDetails.status,
         imageUrl: mangaDetails.imageUrl.trim(),
-        categoryNames: [], // Initialize with empty array, assignment is separate
+        categoryNames: [], 
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -140,6 +176,9 @@ export default function ManageMangasPage() {
       }
       if (mangaDetails.externalReadLink.trim()) {
         dataToSave.externalReadLink = mangaDetails.externalReadLink.trim();
+      }
+      if (mangaDetails.selectedSectionId) {
+        dataToSave.sectionId = mangaDetails.selectedSectionId;
       }
       
       await addDoc(collection(db, 'mangas'), dataToSave);
@@ -170,6 +209,12 @@ export default function ManageMangasPage() {
         console.error("Error deleting manga: ", error);
         toast({ title: "Error Deleting Manga", description: error.message || "Could not delete manga.", variant: "destructive" });
     }
+  };
+
+  const getSectionNameById = (sectionId?: string) => {
+    if (!sectionId) return 'N/A';
+    const section = allSections.find(s => s.id === sectionId);
+    return section ? section.name : 'Unknown Section';
   };
 
 
@@ -218,6 +263,25 @@ export default function ManageMangasPage() {
             </div>
             
             <div>
+              <Label htmlFor="selectedSectionId" className="text-neutral-extralight">Homepage Section (Optional)</Label>
+              <Select value={mangaDetails.selectedSectionId} onValueChange={handleSectionChange} disabled={isLoadingSections || isSubmittingManga}>
+                <SelectTrigger id="selectedSectionId" className="w-full bg-neutral-light border-neutral-light text-neutral-extralight focus:ring-brand-primary">
+                  <SelectValue placeholder={isLoadingSections ? "Loading sections..." : "Select a section"} />
+                </SelectTrigger>
+                <SelectContent className="bg-neutral-light text-neutral-extralight border-neutral-medium">
+                  <SelectItem value="" className="hover:bg-neutral-medium focus:bg-neutral-medium">
+                    -- No Section --
+                  </SelectItem>
+                  {allSections.map(section => (
+                    <SelectItem key={section.id} value={section.id} className="hover:bg-neutral-medium focus:bg-neutral-medium">
+                      {section.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
               <Label htmlFor="imageUrl" className="text-neutral-extralight">Cover Image URL</Label>
               <Input 
                 id="imageUrl" 
@@ -252,7 +316,7 @@ export default function ManageMangasPage() {
                         alt="Cover preview" 
                         layout="fill" 
                         objectFit="cover" 
-                        key={mangaDetails.imageUrl}
+                        key={mangaDetails.imageUrl} // Re-render if URL changes
                         onError={(e) => (e.currentTarget.src = 'https://placehold.co/300x450/2D3748/A0AEC0?text=Invalid+URL')}
                     />
                   </div>
@@ -268,7 +332,7 @@ export default function ManageMangasPage() {
               <Label htmlFor="dataAiHint" className="text-neutral-extralight">AI Image Hint (Optional)</Label>
               <Input id="dataAiHint" name="dataAiHint" type="text" value={mangaDetails.dataAiHint} onChange={handleChange} placeholder="e.g., epic battle anime" className="bg-neutral-light text-neutral-extralight" />
             </div>
-            <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white w-full sm:w-auto" disabled={isSubmittingManga || isUploadingCover}>
+            <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white w-full sm:w-auto" disabled={isSubmittingManga || isUploadingCover || isLoadingSections}>
               {isSubmittingManga ? 'Adding Manga...' : 'Add Manga'}
             </Button>
           </CardContent>
@@ -309,6 +373,9 @@ export default function ManageMangasPage() {
                     {manga.categoryNames && manga.categoryNames.length > 0 && (
                        <p className="text-xs text-neutral-extralight/70 truncate" title={manga.categoryNames.join(', ')}>Categories: {manga.categoryNames.join(', ')}</p>
                     )}
+                     {manga.sectionId && (
+                       <p className="text-xs text-neutral-extralight/70 truncate" title={getSectionNameById(manga.sectionId)}>Section: {getSectionNameById(manga.sectionId)}</p>
+                    )}
                     {manga.externalReadLink && (
                       <a href={manga.externalReadLink} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-primary hover:underline flex items-center mt-1">
                          <ExternalLink className="h-3 w-3 mr-1" /> Read Externally
@@ -333,5 +400,4 @@ export default function ManageMangasPage() {
     </div>
   );
 }
-
     
