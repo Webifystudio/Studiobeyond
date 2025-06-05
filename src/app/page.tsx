@@ -3,10 +3,10 @@ import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { HeroSection } from '@/components/manga/hero-section';
 import { MangaGrid, type MangaItem as MangaCardItem } from '@/components/manga/manga-grid';
-import { CategoryGrid, type CategoryItem } from '@/components/manga/category-grid'; // For category name cards
+// CategoryGrid for category names is no longer used on homepage
 import { RecentlyReadMangaGrid } from '@/components/manga/recently-read-manga-grid';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic'; 
 
@@ -29,7 +29,7 @@ interface MangaDoc {
   status: string;
   imageUrl: string;
   dataAiHint?: string;
-  categoryNames?: string[]; // Still needed for other logic, but not directly for homepage category sections now
+  categoryNames?: string[]; 
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -41,6 +41,14 @@ interface CategoryDoc {
   createdAt: Timestamp;
 }
 
+interface CategorySection {
+  id: string;
+  name: string;
+  slug: string;
+  mangaList: MangaCardItem[];
+  hasMore: boolean;
+}
+
 const ITEMS_PER_SECTION_PREVIEW = 6;
 const FETCH_LIMIT_FOR_HAS_MORE = ITEMS_PER_SECTION_PREVIEW + 1;
 
@@ -48,7 +56,7 @@ async function getHomePageData() {
   let heroItem: SliderItemDoc | null = null;
   let trendingManga: MangaCardItem[] = [];
   let newReleaseManga: MangaCardItem[] = []; 
-  let categoriesForGrid: CategoryItem[] = []; // For the grid of category names
+  let categorySections: CategorySection[] = [];
   let hasMoreTrending = false;
   let hasMoreNewReleases = false;
 
@@ -109,36 +117,62 @@ async function getHomePageData() {
     newReleaseManga = allNewReleases.slice(0, ITEMS_PER_SECTION_PREVIEW);
     hasMoreNewReleases = allNewReleases.length > ITEMS_PER_SECTION_PREVIEW;
 
-    // Fetch Categories for the Category Grid (names and links)
+    // Fetch Categories and their respective manga previews
     const categoriesCollectionQuery = query(collection(db, 'categories'), orderBy('name', 'asc'));
     const categoriesSnapshot = await getDocs(categoriesCollectionQuery);
-    categoriesForGrid = categoriesSnapshot.docs.map(doc => {
-        const data = doc.data() as CategoryDoc;
-        return {
-            id: doc.id,
-            name: data.name,
-            href: `/category/${data.slug}` // Link to the category's page
-        };
-    });
+    
+    for (const categoryDoc of categoriesSnapshot.docs) {
+        const categoryData = categoryDoc.data() as CategoryDoc;
+        if (categoryData.name) {
+            const mangaForCategoryQuery = query(
+                collection(db, 'mangas'),
+                where('categoryNames', 'array-contains', categoryData.name),
+                orderBy('updatedAt', 'desc'),
+                limit(FETCH_LIMIT_FOR_HAS_MORE)
+            );
+            const mangaSnapshot = await getDocs(mangaForCategoryQuery);
+            const allMangaForCategory = mangaSnapshot.docs.map(mangaDoc => {
+                const data = mangaDoc.data() as Omit<MangaDoc, 'id'>;
+                return {
+                    id: mangaDoc.id,
+                    title: data.title,
+                    chapter: `${data.status} - ${data.chapters} Ch.`,
+                    imageUrl: data.imageUrl,
+                    dataAiHint: data.dataAiHint,
+                };
+            });
+            
+            if (allMangaForCategory.length > 0) {
+                categorySections.push({
+                    id: categoryDoc.id,
+                    name: categoryData.name,
+                    slug: categoryData.slug,
+                    mangaList: allMangaForCategory.slice(0, ITEMS_PER_SECTION_PREVIEW),
+                    hasMore: allMangaForCategory.length > ITEMS_PER_SECTION_PREVIEW,
+                });
+            }
+        }
+    }
 
   } catch (error) {
     console.error("Error fetching homepage data: ", error);
+    // Reset all data in case of error
     heroItem = null;
     trendingManga = [];
     newReleaseManga = [];
-    categoriesForGrid = [];
+    categorySections = [];
     hasMoreTrending = false;
     hasMoreNewReleases = false;
   }
 
-  return { heroItem, trendingManga, newReleaseManga, categoriesForGrid, hasMoreTrending, hasMoreNewReleases };
+  return { heroItem, trendingManga, newReleaseManga, categorySections, hasMoreTrending, hasMoreNewReleases };
 }
 
 
 export default async function HomePage() {
-  const { heroItem, trendingManga, newReleaseManga, categoriesForGrid, hasMoreTrending, hasMoreNewReleases } = await getHomePageData();
+  const { heroItem, trendingManga, newReleaseManga, categorySections, hasMoreTrending, hasMoreNewReleases } = await getHomePageData();
 
-  const hasAnyContent = trendingManga.length > 0 || newReleaseManga.length > 0 || categoriesForGrid.length > 0;
+  const hasAnyContent = trendingManga.length > 0 || newReleaseManga.length > 0 || categorySections.length > 0;
 
   return (
     <div className="flex flex-col min-h-screen bg-neutral-dark">
@@ -188,15 +222,19 @@ export default async function HomePage() {
                 hasMore={hasMoreNewReleases}
             />
           )}
-
-          {categoriesForGrid.length > 0 && (
-            <CategoryGrid
-                title="Browse by Category"
-                categories={categoriesForGrid}
-                // No viewAllHref or hasMore needed here, as it shows all category names.
-                // A dedicated /categories page could have its own "view all" if paginated.
-            />
-          )}
+          
+          {/* Dynamic Category Sections */}
+          {categorySections.map((categorySection) => (
+            categorySection.mangaList.length > 0 && ( // Only render if the category has manga
+              <MangaGrid
+                key={categorySection.id}
+                title={categorySection.name}
+                mangaList={categorySection.mangaList}
+                viewAllHref={`/category/${categorySection.slug}`}
+                hasMore={categorySection.hasMore}
+              />
+            )
+          ))}
           
           {!hasAnyContent && !heroItem && ( 
             <div className="text-center py-10 text-neutral-extralight">
