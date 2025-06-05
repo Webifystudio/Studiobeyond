@@ -141,7 +141,7 @@ async function getHomePageData() {
             };
         });
 
-        if (allMangaForCategory.length > 0) {
+        if (allMangaForCategory.length > 0) { // Only add section if category has manga
             categorySections.push({
                 id: categoryDoc.id,
                 name: categoryData.name,
@@ -215,18 +215,19 @@ export default async function HomePage() {
           )}
 
           {categorySections.map(section => (
-            section.mangaList.length > 0 && (
-                 <MangaGrid
-                    key={section.id}
-                    title={section.name}
-                    mangaList={section.mangaList}
-                    viewAllHref={`/category/${section.slug}`}
-                    hasMore={section.hasMore}
-                />
-            )
+            // section.mangaList.length > 0 is checked inside getHomePageData before pushing to categorySections
+            // but it's good practice for defensive coding or if logic changes.
+            // However, the MangaGrid component itself will return null if mangaList is empty.
+            <MangaGrid
+                key={section.id}
+                title={section.name}
+                mangaList={section.mangaList}
+                viewAllHref={`/category/${section.slug}`}
+                hasMore={section.hasMore}
+            />
           ))}
           
-          {!hasAnyContent && !heroItem && ( // Show if no hero AND no content sections
+          {!hasAnyContent && !heroItem && ( 
             <div className="text-center py-10 text-neutral-extralight">
               <p className="text-xl mb-2">Welcome to BEYOND SCANS!</p>
               <p>Content is being prepared. Check back soon for exciting manga series.</p>
@@ -241,4 +242,3 @@ export default async function HomePage() {
   );
 }
 
-    
