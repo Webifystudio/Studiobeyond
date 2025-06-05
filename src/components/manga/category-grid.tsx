@@ -8,21 +8,17 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 export interface CategoryItem { 
   id: string;
   name: string;
-  href: string;
+  href: string; // Expecting /category/[slug]
 }
 
 interface CategoryGridProps {
   title: string;
   categories: CategoryItem[];
-  viewAllHref?: string; 
-  hasMore?: boolean;
+  // viewAllHref and hasMore might not be relevant for a grid of category *names*
+  // unless it's a paginated list of categories. For homepage, usually shows all.
 }
 
-export function CategoryGrid({ title, categories, viewAllHref, hasMore }: CategoryGridProps) {
-  // This component (for category NAME cards) is no longer used on the homepage
-  // but kept in case it's needed elsewhere, e.g., a dedicated /categories page.
-  // It's updated to be horizontally scrollable if many categories exist.
-  
+export function CategoryGrid({ title, categories }: CategoryGridProps) {
   if (categories.length === 0) {
      return (
         <section className="mb-12">
@@ -38,13 +34,7 @@ export function CategoryGrid({ title, categories, viewAllHref, hasMore }: Catego
     <section className="mb-12">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl sm:text-3xl font-bold section-title text-white font-headline">{title}</h2>
-        {viewAllHref && hasMore && (
-          <Button variant="outline" asChild size="sm" className="text-sm">
-            <Link href={viewAllHref}>
-              View All <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        )}
+        {/* Optionally, a "View All Categories" button could go here if there was a dedicated page for all categories */}
       </div>
       <ScrollArea orientation="horizontal" className="w-full pb-3 -mb-3">
         <div className="flex space-x-4 sm:space-x-5 py-2">
@@ -59,5 +49,3 @@ export function CategoryGrid({ title, categories, viewAllHref, hasMore }: Catego
     </section>
   );
 }
-
-    

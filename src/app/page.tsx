@@ -2,10 +2,11 @@
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { HeroSection } from '@/components/manga/hero-section';
-import { MangaGrid, type MangaItem } from '@/components/manga/manga-grid';
+import { MangaGrid, type MangaItem as MangaCardItem } from '@/components/manga/manga-grid';
+import { CategoryGrid, type CategoryItem } from '@/components/manga/category-grid'; // For category name cards
 import { RecentlyReadMangaGrid } from '@/components/manga/recently-read-manga-grid';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, orderBy, limit, Timestamp, where } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic'; 
 
@@ -28,7 +29,7 @@ interface MangaDoc {
   status: string;
   imageUrl: string;
   dataAiHint?: string;
-  categoryNames?: string[];
+  categoryNames?: string[]; // Still needed for other logic, but not directly for homepage category sections now
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -40,22 +41,14 @@ interface CategoryDoc {
   createdAt: Timestamp;
 }
 
-interface CategorySectionData {
-  id: string;
-  name: string;
-  slug: string;
-  mangaList: MangaItem[];
-  hasMore: boolean;
-}
-
 const ITEMS_PER_SECTION_PREVIEW = 6;
 const FETCH_LIMIT_FOR_HAS_MORE = ITEMS_PER_SECTION_PREVIEW + 1;
 
 async function getHomePageData() {
   let heroItem: SliderItemDoc | null = null;
-  let trendingManga: MangaItem[] = [];
-  let newReleaseManga: MangaItem[] = []; 
-  let categorySections: CategorySectionData[] = [];
+  let trendingManga: MangaCardItem[] = [];
+  let newReleaseManga: MangaCardItem[] = []; 
+  let categoriesForGrid: CategoryItem[] = []; // For the grid of category names
   let hasMoreTrending = false;
   let hasMoreNewReleases = false;
 
@@ -77,7 +70,7 @@ async function getHomePageData() {
       };
     }
 
-    // Fetch Trending Manga (using createdAt as proxy for trending)
+    // Fetch Trending Manga
     const trendingQuery = query(collection(db, 'mangas'), orderBy('createdAt', 'desc'), limit(FETCH_LIMIT_FOR_HAS_MORE));
     const trendingSnapshot = await getDocs(trendingQuery);
     const allTrending = trendingSnapshot.docs.map(doc => {
@@ -93,8 +86,7 @@ async function getHomePageData() {
     trendingManga = allTrending.slice(0, ITEMS_PER_SECTION_PREVIEW);
     hasMoreTrending = allTrending.length > ITEMS_PER_SECTION_PREVIEW;
 
-
-    // Fetch New Release Manga (using updatedAt)
+    // Fetch New Release Manga
     const newReleaseQuery = query(collection(db, 'mangas'), orderBy('updatedAt', 'desc'), limit(FETCH_LIMIT_FOR_HAS_MORE));
     let newReleaseSnapshot = await getDocs(newReleaseQuery);
      if (newReleaseSnapshot.docs.length < FETCH_LIMIT_FOR_HAS_MORE) { 
@@ -117,61 +109,36 @@ async function getHomePageData() {
     newReleaseManga = allNewReleases.slice(0, ITEMS_PER_SECTION_PREVIEW);
     hasMoreNewReleases = allNewReleases.length > ITEMS_PER_SECTION_PREVIEW;
 
-    // Fetch Categories from Firestore, then for each category, fetch its manga
+    // Fetch Categories for the Category Grid (names and links)
     const categoriesCollectionQuery = query(collection(db, 'categories'), orderBy('name', 'asc'));
     const categoriesSnapshot = await getDocs(categoriesCollectionQuery);
-    
-    for (const categoryDoc of categoriesSnapshot.docs) {
-        const categoryData = categoryDoc.data() as CategoryDoc;
-        const mangaForCategoryQuery = query(
-            collection(db, 'mangas'), 
-            where('categoryNames', 'array-contains', categoryData.name), 
-            orderBy('updatedAt', 'desc'), 
-            limit(FETCH_LIMIT_FOR_HAS_MORE) // Fetch one extra to check if "View All" is needed
-        );
-        const mangaSnapshot = await getDocs(mangaForCategoryQuery);
-        const allMangaForCategory = mangaSnapshot.docs.map(doc => {
-            const data = doc.data() as Omit<MangaDoc, 'id'>;
-            return {
-                id: doc.id,
-                title: data.title,
-                chapter: `${data.status} - ${data.chapters} Ch.`,
-                imageUrl: data.imageUrl,
-                dataAiHint: data.dataAiHint,
-            };
-        });
-
-        // Only add the category section if it has manga assigned to it
-        if (allMangaForCategory.length > 0) {
-            categorySections.push({
-                id: categoryDoc.id,
-                name: categoryData.name, // This name will be the title of the MangaGrid
-                slug: categoryData.slug,
-                mangaList: allMangaForCategory.slice(0, ITEMS_PER_SECTION_PREVIEW),
-                hasMore: allMangaForCategory.length > ITEMS_PER_SECTION_PREVIEW,
-            });
-        }
-    }
+    categoriesForGrid = categoriesSnapshot.docs.map(doc => {
+        const data = doc.data() as CategoryDoc;
+        return {
+            id: doc.id,
+            name: data.name,
+            href: `/category/${data.slug}` // Link to the category's page
+        };
+    });
 
   } catch (error) {
     console.error("Error fetching homepage data: ", error);
-    // Initialize with empty arrays or defaults if error occurs
     heroItem = null;
     trendingManga = [];
     newReleaseManga = [];
-    categorySections = [];
+    categoriesForGrid = [];
     hasMoreTrending = false;
     hasMoreNewReleases = false;
   }
 
-  return { heroItem, trendingManga, newReleaseManga, categorySections, hasMoreTrending, hasMoreNewReleases };
+  return { heroItem, trendingManga, newReleaseManga, categoriesForGrid, hasMoreTrending, hasMoreNewReleases };
 }
 
 
 export default async function HomePage() {
-  const { heroItem, trendingManga, newReleaseManga, categorySections, hasMoreTrending, hasMoreNewReleases } = await getHomePageData();
+  const { heroItem, trendingManga, newReleaseManga, categoriesForGrid, hasMoreTrending, hasMoreNewReleases } = await getHomePageData();
 
-  const hasAnyContent = trendingManga.length > 0 || newReleaseManga.length > 0 || categorySections.some(sec => sec.mangaList.length > 0);
+  const hasAnyContent = trendingManga.length > 0 || newReleaseManga.length > 0 || categoriesForGrid.length > 0;
 
   return (
     <div className="flex flex-col min-h-screen bg-neutral-dark">
@@ -222,16 +189,14 @@ export default async function HomePage() {
             />
           )}
 
-          {/* Dynamically generated category sections */}
-          {categorySections.map(section => (
-            <MangaGrid
-                key={section.id}
-                title={section.name} // The title here comes from the category name in Firestore
-                mangaList={section.mangaList}
-                viewAllHref={`/category/${section.slug}`}
-                hasMore={section.hasMore}
+          {categoriesForGrid.length > 0 && (
+            <CategoryGrid
+                title="Browse by Category"
+                categories={categoriesForGrid}
+                // No viewAllHref or hasMore needed here, as it shows all category names.
+                // A dedicated /categories page could have its own "view all" if paginated.
             />
-          ))}
+          )}
           
           {!hasAnyContent && !heroItem && ( 
             <div className="text-center py-10 text-neutral-extralight">
