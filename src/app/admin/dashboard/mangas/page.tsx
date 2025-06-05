@@ -23,7 +23,7 @@ interface Manga {
   categoryNames?: string[];
   dataAiHint?: string;
   externalReadLink?: string;
-  sectionId?: string; // Added for assigning to a custom homepage section
+  sectionId?: string; 
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -34,6 +34,8 @@ interface Section {
   slug: string;
 }
 
+const NO_SECTION_VALUE = "NONE_INTERNAL_VALUE"; // Unique value for "No Section" option
+
 const initialMangaDetails = {
   title: '',
   description: '',
@@ -42,7 +44,7 @@ const initialMangaDetails = {
   imageUrl: '',
   dataAiHint: '',
   externalReadLink: '',
-  selectedSectionId: '', // Added for the form state
+  selectedSectionId: '', 
 };
 
 const IMGBB_API_KEY = "2bb2346a6a907388d8a3b0beac2bca86"; 
@@ -108,7 +110,9 @@ export default function ManageMangasPage() {
   };
   
   const handleSectionChange = (value: string) => {
-    setMangaDetails(prev => ({ ...prev, selectedSectionId: value }));
+    // If the special "No Section" value is selected, set state to empty string,
+    // otherwise use the actual section ID.
+    setMangaDetails(prev => ({ ...prev, selectedSectionId: value === NO_SECTION_VALUE ? "" : value }));
   };
 
   const handleCoverFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -177,7 +181,8 @@ export default function ManageMangasPage() {
       if (mangaDetails.externalReadLink.trim()) {
         dataToSave.externalReadLink = mangaDetails.externalReadLink.trim();
       }
-      if (mangaDetails.selectedSectionId) {
+      // Only add sectionId if it's a non-empty string
+      if (mangaDetails.selectedSectionId && mangaDetails.selectedSectionId.trim() !== "") {
         dataToSave.sectionId = mangaDetails.selectedSectionId;
       }
       
@@ -269,7 +274,7 @@ export default function ManageMangasPage() {
                   <SelectValue placeholder={isLoadingSections ? "Loading sections..." : "Select a section"} />
                 </SelectTrigger>
                 <SelectContent className="bg-neutral-light text-neutral-extralight border-neutral-medium">
-                  <SelectItem value="" className="hover:bg-neutral-medium focus:bg-neutral-medium">
+                  <SelectItem value={NO_SECTION_VALUE} className="hover:bg-neutral-medium focus:bg-neutral-medium">
                     -- No Section --
                   </SelectItem>
                   {allSections.map(section => (
@@ -316,7 +321,7 @@ export default function ManageMangasPage() {
                         alt="Cover preview" 
                         layout="fill" 
                         objectFit="cover" 
-                        key={mangaDetails.imageUrl} // Re-render if URL changes
+                        key={mangaDetails.imageUrl} 
                         onError={(e) => (e.currentTarget.src = 'https://placehold.co/300x450/2D3748/A0AEC0?text=Invalid+URL')}
                     />
                   </div>
