@@ -3,7 +3,7 @@ import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { HeroSection } from '@/components/manga/hero-section';
 import { MangaGrid, type MangaItem as MangaCardItem } from '@/components/manga/manga-grid';
-// CategoryGrid for category names is no longer used on homepage
+import { CategoryGrid, type CategoryItem } from '@/components/manga/category-grid'; // Changed this import
 import { RecentlyReadMangaGrid } from '@/components/manga/recently-read-manga-grid';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
@@ -41,14 +41,6 @@ interface CategoryDoc {
   createdAt: Timestamp;
 }
 
-interface CategorySection {
-  id: string;
-  name: string;
-  slug: string;
-  mangaList: MangaCardItem[];
-  hasMore: boolean;
-}
-
 const ITEMS_PER_SECTION_PREVIEW = 6;
 const FETCH_LIMIT_FOR_HAS_MORE = ITEMS_PER_SECTION_PREVIEW + 1;
 
@@ -56,7 +48,7 @@ async function getHomePageData() {
   let heroItem: SliderItemDoc | null = null;
   let trendingManga: MangaCardItem[] = [];
   let newReleaseManga: MangaCardItem[] = []; 
-  let categorySections: CategorySection[] = [];
+  let allCategories: CategoryItem[] = []; // Changed to store CategoryItem for names
   let hasMoreTrending = false;
   let hasMoreNewReleases = false;
 
@@ -117,62 +109,36 @@ async function getHomePageData() {
     newReleaseManga = allNewReleases.slice(0, ITEMS_PER_SECTION_PREVIEW);
     hasMoreNewReleases = allNewReleases.length > ITEMS_PER_SECTION_PREVIEW;
 
-    // Fetch Categories and their respective manga previews
+    // Fetch all Category Names
     const categoriesCollectionQuery = query(collection(db, 'categories'), orderBy('name', 'asc'));
     const categoriesSnapshot = await getDocs(categoriesCollectionQuery);
-    
-    for (const categoryDoc of categoriesSnapshot.docs) {
-        const categoryData = categoryDoc.data() as CategoryDoc;
-        if (categoryData.name) {
-            const mangaForCategoryQuery = query(
-                collection(db, 'mangas'),
-                where('categoryNames', 'array-contains', categoryData.name),
-                orderBy('updatedAt', 'desc'),
-                limit(FETCH_LIMIT_FOR_HAS_MORE)
-            );
-            const mangaSnapshot = await getDocs(mangaForCategoryQuery);
-            const allMangaForCategory = mangaSnapshot.docs.map(mangaDoc => {
-                const data = mangaDoc.data() as Omit<MangaDoc, 'id'>;
-                return {
-                    id: mangaDoc.id,
-                    title: data.title,
-                    chapter: `${data.status} - ${data.chapters} Ch.`,
-                    imageUrl: data.imageUrl,
-                    dataAiHint: data.dataAiHint,
-                };
-            });
-            
-            if (allMangaForCategory.length > 0) {
-                categorySections.push({
-                    id: categoryDoc.id,
-                    name: categoryData.name,
-                    slug: categoryData.slug,
-                    mangaList: allMangaForCategory.slice(0, ITEMS_PER_SECTION_PREVIEW),
-                    hasMore: allMangaForCategory.length > ITEMS_PER_SECTION_PREVIEW,
-                });
-            }
-        }
-    }
+    allCategories = categoriesSnapshot.docs.map(categoryDoc => {
+      const categoryData = categoryDoc.data() as CategoryDoc;
+      return {
+        id: categoryDoc.id,
+        name: categoryData.name,
+        href: `/category/${categoryData.slug || categoryData.name.toLowerCase().replace(/\s+/g, '-')}`,
+      };
+    });
 
   } catch (error) {
     console.error("Error fetching homepage data: ", error);
-    // Reset all data in case of error
     heroItem = null;
     trendingManga = [];
     newReleaseManga = [];
-    categorySections = [];
+    allCategories = []; // Reset categories
     hasMoreTrending = false;
     hasMoreNewReleases = false;
   }
 
-  return { heroItem, trendingManga, newReleaseManga, categorySections, hasMoreTrending, hasMoreNewReleases };
+  return { heroItem, trendingManga, newReleaseManga, allCategories, hasMoreTrending, hasMoreNewReleases };
 }
 
 
 export default async function HomePage() {
-  const { heroItem, trendingManga, newReleaseManga, categorySections, hasMoreTrending, hasMoreNewReleases } = await getHomePageData();
+  const { heroItem, trendingManga, newReleaseManga, allCategories, hasMoreTrending, hasMoreNewReleases } = await getHomePageData();
 
-  const hasAnyContent = trendingManga.length > 0 || newReleaseManga.length > 0 || categorySections.length > 0;
+  const hasAnyContent = trendingManga.length > 0 || newReleaseManga.length > 0 || allCategories.length > 0;
 
   return (
     <div className="flex flex-col min-h-screen bg-neutral-dark">
@@ -223,18 +189,13 @@ export default async function HomePage() {
             />
           )}
           
-          {/* Dynamic Category Sections */}
-          {categorySections.map((categorySection) => (
-            categorySection.mangaList.length > 0 && ( // Only render if the category has manga
-              <MangaGrid
-                key={categorySection.id}
-                title={categorySection.name}
-                mangaList={categorySection.mangaList}
-                viewAllHref={`/category/${categorySection.slug}`}
-                hasMore={categorySection.hasMore}
-              />
-            )
-          ))}
+          {/* Display Category Grid with category names */}
+          {allCategories.length > 0 && (
+            <CategoryGrid
+              title="Browse by Category"
+              categories={allCategories}
+            />
+          )}
           
           {!hasAnyContent && !heroItem && ( 
             <div className="text-center py-10 text-neutral-extralight">
