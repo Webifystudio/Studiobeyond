@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tag, ListFilter, Trash2, Link2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { db, collection, getDocs, doc, updateDoc, arrayUnion, arrayRemove, query, orderBy } from 'firebase/firestore';
+import { db, collection, getDocs, doc, updateDoc, arrayUnion, arrayRemove, query, orderBy } from '@/lib/firebase'; // Corrected import path
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Manga {
