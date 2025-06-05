@@ -3,7 +3,7 @@ import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { HeroSection } from '@/components/manga/hero-section';
 import { MangaGrid, type MangaItem as MangaCardItem } from '@/components/manga/manga-grid';
-// import { CategoryGrid, type CategoryItem } from '@/components/manga/category-grid'; // No longer used on homepage
+import { CategoryGrid, type CategoryItem } from '@/components/manga/category-grid';
 import { RecentlyReadMangaGrid } from '@/components/manga/recently-read-manga-grid';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy, limit, where, type Timestamp } from 'firebase/firestore';
@@ -29,23 +29,17 @@ interface MangaDoc {
   status: string;
   imageUrl: string;
   dataAiHint?: string;
-  sectionId?: string; 
   genres?: string[]; 
   createdAt: Timestamp;
   updatedAt: Timestamp;
   views?: number;
 }
 
-interface SectionDoc {
+interface CategoryDocForHomepage {
   id: string;
   name: string;
   slug: string;
   createdAt: Timestamp;
-}
-
-interface CustomSectionForHomepage extends SectionDoc {
-  mangaList: MangaCardItem[];
-  hasMore: boolean;
 }
 
 const ITEMS_PER_MANGA_SECTION_PREVIEW = 6;
@@ -55,7 +49,7 @@ async function getHomePageData() {
   let heroItem: SliderItemDoc | null = null;
   let trendingManga: MangaCardItem[] = [];
   let newReleaseManga: MangaCardItem[] = []; 
-  let customSections: CustomSectionForHomepage[] = [];
+  let categories: CategoryItem[] = [];
   let hasMoreTrending = false;
   let hasMoreNewReleases = false;
 
@@ -116,59 +110,36 @@ async function getHomePageData() {
     newReleaseManga = allNewReleases.slice(0, ITEMS_PER_MANGA_SECTION_PREVIEW);
     hasMoreNewReleases = allNewReleases.length > ITEMS_PER_MANGA_SECTION_PREVIEW;
 
-    // Fetch Custom Sections and their Manga
-    const sectionsQuery = query(collection(db, 'sections'), orderBy('createdAt', 'asc')); // Or order by a custom 'order' field if you add one
-    const sectionsSnapshot = await getDocs(sectionsQuery);
-    
-    for (const sectionDoc of sectionsSnapshot.docs) {
-      const sectionData = { id: sectionDoc.id, ...sectionDoc.data() } as SectionDoc;
-      const mangaForSectionQuery = query(
-        collection(db, 'mangas'), 
-        where('sectionId', '==', sectionData.id),
-        orderBy('updatedAt', 'desc'), // Or another relevant order for manga within sections
-        limit(FETCH_LIMIT_FOR_MANGA_HAS_MORE)
-      );
-      const mangaSnapshot = await getDocs(mangaForSectionQuery);
-      const allMangaInSection = mangaSnapshot.docs.map(doc => {
-        const data = doc.data() as Omit<MangaDoc, 'id'>;
-        return {
-          id: doc.id,
-          title: data.title,
-          chapter: `${data.status} - ${data.chapters} Ch.`,
-          imageUrl: data.imageUrl,
-          dataAiHint: data.dataAiHint,
-        };
-      });
-      
-      if (allMangaInSection.length > 0) {
-        customSections.push({
-          ...sectionData,
-          mangaList: allMangaInSection.slice(0, ITEMS_PER_MANGA_SECTION_PREVIEW),
-          hasMore: allMangaInSection.length > ITEMS_PER_MANGA_SECTION_PREVIEW,
-        });
-      }
-    }
+    // Fetch Categories
+    const categoriesQuery = query(collection(db, 'categories'), orderBy('name', 'asc'));
+    const categoriesSnapshot = await getDocs(categoriesQuery);
+    categories = categoriesSnapshot.docs.map(doc => {
+      const data = doc.data() as Omit<CategoryDocForHomepage, 'id'>;
+      return {
+        id: doc.id,
+        name: data.name,
+        href: `/category/${data.slug || data.name.toLowerCase().replace(/\s+/g, '-')}`,
+      };
+    });
 
   } catch (error) {
     console.error("Error fetching homepage data: ", error);
-    // Reset all to defaults on error
     heroItem = null;
     trendingManga = [];
     newReleaseManga = [];
-    customSections = [];
+    categories = [];
     hasMoreTrending = false;
     hasMoreNewReleases = false;
   }
 
-  return { heroItem, trendingManga, newReleaseManga, customSections, hasMoreTrending, hasMoreNewReleases };
+  return { heroItem, trendingManga, newReleaseManga, categories, hasMoreTrending, hasMoreNewReleases };
 }
 
 
 export default async function HomePage() {
-  const { heroItem, trendingManga, newReleaseManga, customSections, hasMoreTrending, hasMoreNewReleases } = await getHomePageData();
+  const { heroItem, trendingManga, newReleaseManga, categories, hasMoreTrending, hasMoreNewReleases } = await getHomePageData();
 
-  const hasAnyMangaContent = trendingManga.length > 0 || newReleaseManga.length > 0 || customSections.some(sec => sec.mangaList.length > 0);
-  const hasAnyContentOverall = hasAnyMangaContent || heroItem;
+  const hasAnyContent = trendingManga.length > 0 || newReleaseManga.length > 0 || categories.length > 0 || heroItem;
 
   return (
     <div className="flex flex-col min-h-screen bg-neutral-dark">
@@ -219,23 +190,11 @@ export default async function HomePage() {
             />
           )}
           
-          {customSections.map(section => (
-            section.mangaList.length > 0 && (
-              <MangaGrid
-                key={section.id}
-                title={section.name}
-                mangaList={section.mangaList}
-                // For custom sections, viewAllHref could link to a filtered browse page or be omitted.
-                // For now, let's assume no dedicated "view all" page for these dynamic sections,
-                // or they could link to a generic browse/search page if one exists.
-                // To omit "View All", ensure MangaGrid handles hasMore=false or missing viewAllHref.
-                // viewAllHref={`/sections/${section.slug}`} // Example if we build section pages
-                hasMore={section.hasMore} // This would control the "View All" button if viewAllHref is provided
-              />
-            )
-          ))}
+          {categories.length > 0 && (
+            <CategoryGrid title="Browse by Category" categories={categories} />
+          )}
           
-          {!hasAnyContentOverall && ( 
+          {!hasAnyContent && ( 
             <div className="text-center py-10 text-neutral-extralight">
               <p className="text-xl mb-2">Welcome to BEYOND SCANS!</p>
               <p>Content is being prepared. Check back soon for exciting manga series.</p>
