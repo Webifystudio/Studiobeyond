@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { db, collection, query, where, getDocs, doc, updateDoc, increment, Timestamp, orderBy, serverTimestamp, addDoc, deleteDoc, getDoc, type User, onAuthStateChanged, auth } from '@/lib/firebase';
+import { db, collection, query, where, getDocs, doc, updateDoc, increment, Timestamp, orderBy, serverTimestamp, addDoc, deleteDoc, getDoc, limit, type User, onAuthStateChanged, auth } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogClose } from '@/components/ui/dialog';
