@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { db, collection, query, where, getDocs, doc, updateDoc, increment, Timestamp, orderBy, serverTimestamp, addDoc, deleteDoc, getDoc, limit, type User, onAuthStateChanged, auth } from '@/lib/firebase';
+import { db, collection, query, where, getDocs, doc, updateDoc, increment, Timestamp, orderBy, serverTimestamp, addDoc, deleteDoc, getDoc, limit, type User, onAuthStateChanged, auth, setDoc } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogClose } from '@/components/ui/dialog';
@@ -41,7 +41,7 @@ interface CustomPageData {
   landingImageUrl?: string;
   dataAiHint?: string;
   views: number;
-  likes?: number; // Ensure this field can exist
+  likes?: number; 
   defaultReadingMode?: 'horizontal' | 'vertical';
   createdAt: Timestamp;
 }
@@ -98,7 +98,7 @@ export default function PublicCustomPage() {
   const [newComment, setNewComment] = useState('');
   const [isPostingComment, setIsPostingComment] = useState(false);
   const [isLoadingComments, setIsLoadingComments] = useState(true);
-  const [showCommentBox, setShowCommentBox] = useState(false);
+  const [isCommentSectionOpen, setIsCommentSectionOpen] = useState(false);
   const [currentViewCount, setCurrentViewCount] = useState(0);
 
   const imageContainerRef = useRef<HTMLDivElement>(null);
@@ -122,7 +122,7 @@ export default function PublicCustomPage() {
         setHasLiked(docSnap.exists());
     } catch (error) {
         console.error("Error checking if user liked:", error);
-        setHasLiked(false); // Default to not liked on error
+        setHasLiked(false); 
     }
   }, []);
   
@@ -145,17 +145,21 @@ export default function PublicCustomPage() {
         if (currentUser?.uid) {
           checkIfUserLiked(currentUser.uid, data.id);
         }
-        fetchComments(data.id); // Fetch comments after page data is set
+        fetchComments(data.id);
 
         const viewedKey = `viewed-page-${data.id}`;
         if (typeof window !== 'undefined' && !localStorage.getItem(viewedKey)) { 
           const pageDocRef = doc(db, 'customPages', docSnap.id);
-          await updateDoc(pageDocRef, { views: increment(1) });
-          setCurrentViewCount(prev => prev + 1); 
-          localStorage.setItem(viewedKey, 'true');
+          try {
+            await updateDoc(pageDocRef, { views: increment(1) });
+            setCurrentViewCount(prev => prev + 1); 
+            localStorage.setItem(viewedKey, 'true');
+          } catch (viewUpdateError) {
+            console.error("Error incrementing view count:", viewUpdateError);
+          }
         }
         
-        fetchChapters(docSnap.id); // Fetch chapters after page data is set
+        fetchChapters(docSnap.id);
 
       } else {
         console.log(`No custom page found with slug: ${pageSlug}`);
@@ -270,7 +274,7 @@ export default function PublicCustomPage() {
       await addDoc(commentsColRef, commentData);
       
       setNewComment('');
-      setShowCommentBox(false);
+      // setIsCommentSectionOpen(false); // Keep comment section open to see new comment
       toast({ title: "Comment Posted!" });
       fetchComments(pageData.id); 
     } catch (error: any) {
@@ -478,7 +482,7 @@ export default function PublicCustomPage() {
                     </TooltipContent>
                 </Tooltip>
             </TooltipProvider>
-            <Button 
+             <Button 
               variant="ghost" 
               size="sm" 
               onClick={() => navigateChapter('prev')} 
@@ -652,12 +656,12 @@ export default function PublicCustomPage() {
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" className="text-white hover:text-brand-primary p-1.5 group rounded-full flex items-center" onClick={() => setShowCommentBox(!showCommentBox)} aria-label="Comment on this page">
+                    <Button variant="ghost" className="text-white hover:text-brand-primary p-1.5 group rounded-full flex items-center" onClick={() => setIsCommentSectionOpen(!isCommentSectionOpen)} aria-label="Toggle comments section">
                       <MessageCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
                        <span className="ml-1.5 text-xs sm:text-sm">{comments.length}</span>
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom" className="bg-neutral-medium text-neutral-extralight border-neutral-light"><p>Comment</p></TooltipContent>
+                  <TooltipContent side="bottom" className="bg-neutral-medium text-neutral-extralight border-neutral-light"><p>Comments</p></TooltipContent>
                 </Tooltip>
                 
                 <Dialog open={isChapterSelectForDownloadModalOpen} onOpenChange={setIsChapterSelectForDownloadModalOpen}>
@@ -750,87 +754,87 @@ export default function PublicCustomPage() {
           </div>
         </section>
         
-        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-neutral-dark">
-           {showCommentBox && (
-            <div className="mb-8">
-                <h3 className="text-xl font-semibold text-white mb-4">Leave a Comment</h3>
-                 {currentUser ? (
-                    <form onSubmit={handlePostComment} className="space-y-3 bg-neutral-medium p-4 rounded-lg shadow-md">
-                        <div className="flex items-start space-x-3">
-                            <Avatar className="h-10 w-10 mt-1 shrink-0">
-                                <AvatarImage src={currentUser.photoURL || undefined} alt={currentUser.displayName || "User"}/>
-                                <AvatarFallback className="bg-neutral-light text-brand-primary">
-                                    {getInitials(currentUser.displayName)}
-                                </AvatarFallback>
-                            </Avatar>
-                            <Textarea
-                                value={newComment}
-                                onChange={(e) => setNewComment(e.target.value)}
-                                placeholder="Add a public comment..."
-                                className="bg-neutral-light text-neutral-extralight border-neutral-light focus:ring-brand-primary flex-1"
-                                rows={3}
-                            />
-                        </div>
-                        <div className="flex justify-end space-x-2">
-                            <Button type="button" variant="ghost" onClick={() => {setNewComment(''); setShowCommentBox(false);}} className="hover:bg-neutral-light">Cancel</Button>
-                            <Button type="submit" disabled={isPostingComment || !newComment.trim()} className="bg-brand-primary hover:bg-brand-primary/80 text-white">
-                                <Send className="mr-2 h-4 w-4"/> {isPostingComment ? 'Posting...' : 'Comment'}
-                            </Button>
-                        </div>
-                    </form>
-                ) : (
-                    <p className="text-neutral-extralight/70 p-4 bg-neutral-medium rounded-lg shadow-md">
-                        <Link href="/login" className="text-brand-primary hover:underline">Log in</Link> to post a comment.
-                    </p>
-                )}
-            </div>
-           )}
-
-            <h3 className="text-xl font-semibold text-white mb-4">
-                {isLoadingComments ? 'Loading Comments...' : `Comments (${comments.length})`}
-            </h3>
-            {isLoadingComments && comments.length === 0 ? (
-                <div className="space-y-4">
-                    {[...Array(2)].map((_, i) => (
-                        <div key={i} className="flex items-start space-x-3 bg-neutral-medium p-3 rounded-lg shadow">
-                            <Skeleton className="h-10 w-10 rounded-full" />
-                            <div className="flex-1 space-y-2">
-                                <Skeleton className="h-4 w-1/4" />
-                                <Skeleton className="h-4 w-3/4" />
+        {isCommentSectionOpen && (
+            <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-neutral-dark">
+                <div>
+                    <h3 className="text-xl font-semibold text-white mb-4">Leave a Comment</h3>
+                    {currentUser ? (
+                        <form onSubmit={handlePostComment} className="space-y-3 bg-neutral-medium p-4 rounded-lg shadow-md">
+                            <div className="flex items-start space-x-3">
+                                <Avatar className="h-10 w-10 mt-1 shrink-0">
+                                    <AvatarImage src={currentUser.photoURL || undefined} alt={currentUser.displayName || "User"}/>
+                                    <AvatarFallback className="bg-neutral-light text-brand-primary">
+                                        {getInitials(currentUser.displayName)}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <Textarea
+                                    value={newComment}
+                                    onChange={(e) => setNewComment(e.target.value)}
+                                    placeholder="Add a public comment..."
+                                    className="bg-neutral-light text-neutral-extralight border-neutral-light focus:ring-brand-primary flex-1"
+                                    rows={3}
+                                />
                             </div>
-                        </div>
-                    ))}
+                            <div className="flex justify-end space-x-2">
+                                <Button type="button" variant="ghost" onClick={() => {setNewComment(''); setIsCommentSectionOpen(false);}} className="hover:bg-neutral-light">Cancel</Button>
+                                <Button type="submit" disabled={isPostingComment || !newComment.trim()} className="bg-brand-primary hover:bg-brand-primary/80 text-white">
+                                    <Send className="mr-2 h-4 w-4"/> {isPostingComment ? 'Posting...' : 'Comment'}
+                                </Button>
+                            </div>
+                        </form>
+                    ) : (
+                        <p className="text-neutral-extralight/70 p-4 bg-neutral-medium rounded-lg shadow-md">
+                            <Link href="/login" className="text-brand-primary hover:underline">Log in</Link> to post a comment.
+                        </p>
+                    )}
                 </div>
-            ) : comments.length > 0 ? (
-                <ScrollArea className="max-h-[60vh] pr-3">
+
+                <h3 className="text-xl font-semibold text-white mb-4 mt-8">
+                    {isLoadingComments ? 'Loading Comments...' : `Comments (${comments.length})`}
+                </h3>
+                {isLoadingComments && comments.length === 0 ? (
                     <div className="space-y-4">
-                    {comments.map(comment => (
-                        <div key={comment.id} className="flex items-start space-x-3 bg-neutral-medium p-3 rounded-lg shadow">
-                            <Avatar className="h-8 w-8 sm:h-10 sm:w-10 shrink-0">
-                                <AvatarImage src={comment.userPhotoURL || undefined} alt={comment.username} />
-                                <AvatarFallback className="bg-neutral-light text-brand-primary text-sm">
-                                    {getInitials(comment.username)}
-                                </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                                <div className="flex items-baseline space-x-2">
-                                    <p className="text-sm font-semibold text-white">{comment.username}</p>
-                                    {comment.createdAt?.toDate && (
-                                        <p className="text-xs text-neutral-extralight/60">
-                                            {formatDistanceToNowStrict(comment.createdAt.toDate(), { addSuffix: true })}
-                                        </p>
-                                    )}
+                        {[...Array(2)].map((_, i) => (
+                            <div key={i} className="flex items-start space-x-3 bg-neutral-medium p-3 rounded-lg shadow">
+                                <Skeleton className="h-10 w-10 rounded-full" />
+                                <div className="flex-1 space-y-2">
+                                    <Skeleton className="h-4 w-1/4" />
+                                    <Skeleton className="h-4 w-3/4" />
                                 </div>
-                                <p className="text-sm text-neutral-extralight/90 whitespace-pre-line mt-1">{comment.text}</p>
                             </div>
-                        </div>
-                    ))}
+                        ))}
                     </div>
-                </ScrollArea>
-            ) : (
-                !isLoadingComments && <p className="text-neutral-extralight/70 p-4 bg-neutral-medium rounded-lg text-center shadow-md">No comments yet. Be the first to comment!</p>
-            )}
-        </section>
+                ) : comments.length > 0 ? (
+                    <ScrollArea className="max-h-[60vh] pr-3">
+                        <div className="space-y-4">
+                        {comments.map(comment => (
+                            <div key={comment.id} className="flex items-start space-x-3 bg-neutral-medium p-3 rounded-lg shadow">
+                                <Avatar className="h-8 w-8 sm:h-10 sm:w-10 shrink-0">
+                                    <AvatarImage src={comment.userPhotoURL || undefined} alt={comment.username} />
+                                    <AvatarFallback className="bg-neutral-light text-brand-primary text-sm">
+                                        {getInitials(comment.username)}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1">
+                                    <div className="flex items-baseline space-x-2">
+                                        <p className="text-sm font-semibold text-white">{comment.username}</p>
+                                        {comment.createdAt?.toDate && (
+                                            <p className="text-xs text-neutral-extralight/60">
+                                                {formatDistanceToNowStrict(comment.createdAt.toDate(), { addSuffix: true })}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <p className="text-sm text-neutral-extralight/90 whitespace-pre-line mt-1">{comment.text}</p>
+                                </div>
+                            </div>
+                        ))}
+                        </div>
+                    </ScrollArea>
+                ) : (
+                    !isLoadingComments && <p className="text-neutral-extralight/70 p-4 bg-neutral-medium rounded-lg text-center shadow-md">No comments yet. Be the first to comment!</p>
+                )}
+            </section>
+        )}
         
         {(filteredChapters.length > 0 || chapterSearchTerm || isLoadingChapters) && (
           <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-neutral-dark">
