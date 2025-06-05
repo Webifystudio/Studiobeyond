@@ -117,9 +117,9 @@ async function getHomePageData() {
     newReleaseManga = allNewReleases.slice(0, ITEMS_PER_SECTION_PREVIEW);
     hasMoreNewReleases = allNewReleases.length > ITEMS_PER_SECTION_PREVIEW;
 
-    // Fetch Categories and then manga for each category
-    const categoriesQuery = query(collection(db, 'categories'), orderBy('name', 'asc'));
-    const categoriesSnapshot = await getDocs(categoriesQuery);
+    // Fetch Categories from Firestore, then for each category, fetch its manga
+    const categoriesCollectionQuery = query(collection(db, 'categories'), orderBy('name', 'asc'));
+    const categoriesSnapshot = await getDocs(categoriesCollectionQuery);
     
     for (const categoryDoc of categoriesSnapshot.docs) {
         const categoryData = categoryDoc.data() as CategoryDoc;
@@ -127,7 +127,7 @@ async function getHomePageData() {
             collection(db, 'mangas'), 
             where('categoryNames', 'array-contains', categoryData.name), 
             orderBy('updatedAt', 'desc'), 
-            limit(FETCH_LIMIT_FOR_HAS_MORE)
+            limit(FETCH_LIMIT_FOR_HAS_MORE) // Fetch one extra to check if "View All" is needed
         );
         const mangaSnapshot = await getDocs(mangaForCategoryQuery);
         const allMangaForCategory = mangaSnapshot.docs.map(doc => {
@@ -141,10 +141,11 @@ async function getHomePageData() {
             };
         });
 
-        if (allMangaForCategory.length > 0) { // Only add section if category has manga
+        // Only add the category section if it has manga assigned to it
+        if (allMangaForCategory.length > 0) {
             categorySections.push({
                 id: categoryDoc.id,
-                name: categoryData.name,
+                name: categoryData.name, // This name will be the title of the MangaGrid
                 slug: categoryData.slug,
                 mangaList: allMangaForCategory.slice(0, ITEMS_PER_SECTION_PREVIEW),
                 hasMore: allMangaForCategory.length > ITEMS_PER_SECTION_PREVIEW,
@@ -154,6 +155,13 @@ async function getHomePageData() {
 
   } catch (error) {
     console.error("Error fetching homepage data: ", error);
+    // Initialize with empty arrays or defaults if error occurs
+    heroItem = null;
+    trendingManga = [];
+    newReleaseManga = [];
+    categorySections = [];
+    hasMoreTrending = false;
+    hasMoreNewReleases = false;
   }
 
   return { heroItem, trendingManga, newReleaseManga, categorySections, hasMoreTrending, hasMoreNewReleases };
@@ -214,13 +222,11 @@ export default async function HomePage() {
             />
           )}
 
+          {/* Dynamically generated category sections */}
           {categorySections.map(section => (
-            // section.mangaList.length > 0 is checked inside getHomePageData before pushing to categorySections
-            // but it's good practice for defensive coding or if logic changes.
-            // However, the MangaGrid component itself will return null if mangaList is empty.
             <MangaGrid
                 key={section.id}
-                title={section.name}
+                title={section.name} // The title here comes from the category name in Firestore
                 mangaList={section.mangaList}
                 viewAllHref={`/category/${section.slug}`}
                 hasMore={section.hasMore}
@@ -241,4 +247,3 @@ export default async function HomePage() {
     </div>
   );
 }
-
