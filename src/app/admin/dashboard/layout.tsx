@@ -6,12 +6,13 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { LayoutDashboard, BookOpen, Image as ImageIcon, LogOut, Home, FileText, Settings, Menu as MenuIcon, Tag, Link2 as Link2Icon, ListChecks } from 'lucide-react'; 
+import { LayoutDashboard, BookOpen, Image as ImageIcon, LogOut, Home, FileText, Settings, Menu as MenuIcon, Tag, Link2 as Link2Icon, ListChecks, LayoutGrid as SectionsIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/dashboard/sections', label: 'Manage Sections', icon: SectionsIcon },
   { href: '/admin/dashboard/categories', label: 'Manage Categories', icon: ListChecks },
   { href: '/admin/dashboard/mangas', label: 'Manage Mangas', icon: BookOpen },
   { href: '/admin/dashboard/assign-manga-category', label: 'Assign Manga to Category', icon: Tag },
@@ -174,5 +175,4 @@ export default function AdminDashboardLayout({
     </div>
   );
 }
-
     

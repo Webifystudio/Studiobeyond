@@ -3,10 +3,10 @@ import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { HeroSection } from '@/components/manga/hero-section';
 import { MangaGrid, type MangaItem as MangaCardItem } from '@/components/manga/manga-grid';
-import { CategoryGrid, type CategoryItem } from '@/components/manga/category-grid'; // Changed this import
+// import { CategoryGrid, type CategoryItem } from '@/components/manga/category-grid'; // No longer used for homepage category name display
 import { RecentlyReadMangaGrid } from '@/components/manga/recently-read-manga-grid';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, where, Timestamp, documentId } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic'; 
 
@@ -29,17 +29,28 @@ interface MangaDoc {
   status: string;
   imageUrl: string;
   dataAiHint?: string;
-  categoryNames?: string[]; 
+  // categoryNames?: string[]; // Kept for category pages, not directly for homepage sections of this type
+  genres?: string[]; // For related/trending logic if needed
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
 
-interface CategoryDoc {
+interface SectionDoc { // New interface for custom homepage sections
   id: string;
   name: string;
   slug: string;
   createdAt: Timestamp;
+  // mangaIds?: string[]; // This field would be used if assigning manga directly to sections
 }
+
+export interface CustomSectionHomepageItem { // New type for homepage data
+    id: string;
+    name: string;
+    slug: string;
+    mangaList: MangaCardItem[];
+    hasMore: boolean; // To show "View All" if this section has a dedicated page or more items
+}
+
 
 const ITEMS_PER_SECTION_PREVIEW = 6;
 const FETCH_LIMIT_FOR_HAS_MORE = ITEMS_PER_SECTION_PREVIEW + 1;
@@ -48,7 +59,7 @@ async function getHomePageData() {
   let heroItem: SliderItemDoc | null = null;
   let trendingManga: MangaCardItem[] = [];
   let newReleaseManga: MangaCardItem[] = []; 
-  let allCategories: CategoryItem[] = []; // Changed to store CategoryItem for names
+  let customSections: CustomSectionHomepageItem[] = [];
   let hasMoreTrending = false;
   let hasMoreNewReleases = false;
 
@@ -71,7 +82,7 @@ async function getHomePageData() {
     }
 
     // Fetch Trending Manga
-    const trendingQuery = query(collection(db, 'mangas'), orderBy('createdAt', 'desc'), limit(FETCH_LIMIT_FOR_HAS_MORE));
+    const trendingQuery = query(collection(db, 'mangas'), orderBy('views', 'desc'), limit(FETCH_LIMIT_FOR_HAS_MORE)); // Example: order by views
     const trendingSnapshot = await getDocs(trendingQuery);
     const allTrending = trendingSnapshot.docs.map(doc => {
       const data = doc.data() as Omit<MangaDoc, 'id'>;
@@ -109,36 +120,70 @@ async function getHomePageData() {
     newReleaseManga = allNewReleases.slice(0, ITEMS_PER_SECTION_PREVIEW);
     hasMoreNewReleases = allNewReleases.length > ITEMS_PER_SECTION_PREVIEW;
 
-    // Fetch all Category Names
-    const categoriesCollectionQuery = query(collection(db, 'categories'), orderBy('name', 'asc'));
-    const categoriesSnapshot = await getDocs(categoriesCollectionQuery);
-    allCategories = categoriesSnapshot.docs.map(categoryDoc => {
-      const categoryData = categoryDoc.data() as CategoryDoc;
-      return {
-        id: categoryDoc.id,
-        name: categoryData.name,
-        href: `/category/${categoryData.slug || categoryData.name.toLowerCase().replace(/\s+/g, '-')}`,
-      };
-    });
+    // Fetch Custom Sections
+    const sectionsQuery = query(collection(db, 'sections'), orderBy('createdAt', 'asc'));
+    const sectionsSnapshot = await getDocs(sectionsQuery);
+    for (const sectionDoc of sectionsSnapshot.docs) {
+        const sectionData = sectionDoc.data() as Omit<SectionDoc, 'id'>;
+        
+        // Placeholder: Fetch manga for this section.
+        // This part needs logic to determine WHICH manga belong to this section.
+        // For now, it will be an empty list.
+        // In a future step, you'll define how manga are assigned (e.g., via 'mangaIds' array in sectionDoc, or another relation).
+        let sectionMangaList: MangaCardItem[] = [];
+        let hasMoreForThisSection = false;
+        
+        // Example of fetching by mangaIds IF that field existed on sectionData
+        // if (sectionData.mangaIds && sectionData.mangaIds.length > 0) {
+        //   const mangaForSectionQuery = query(
+        //     collection(db, 'mangas'),
+        //     where(documentId(), 'in', sectionData.mangaIds.slice(0, FETCH_LIMIT_FOR_HAS_MORE))
+        //     // You might also want an orderBy here if mangaIds doesn't imply order
+        //   );
+        //   const mangaForSectionSnapshot = await getDocs(mangaForSectionQuery);
+        //   const allMangaForSection = mangaForSectionSnapshot.docs.map(mangaDoc => {
+        //     const data = mangaDoc.data() as Omit<MangaDoc, 'id'>;
+        //     return {
+        //       id: mangaDoc.id,
+        //       title: data.title,
+        //       chapter: `${data.status} - ${data.chapters} Ch.`,
+        //       imageUrl: data.imageUrl,
+        //       dataAiHint: data.dataAiHint,
+        //     };
+        //   });
+        //   sectionMangaList = allMangaForSection.slice(0, ITEMS_PER_SECTION_PREVIEW);
+        //   hasMoreForThisSection = allMangaForSection.length > ITEMS_PER_SECTION_PREVIEW;
+        // }
+
+
+        customSections.push({
+            id: sectionDoc.id,
+            name: sectionData.name,
+            slug: sectionData.slug,
+            mangaList: sectionMangaList, // Initially empty or based on future assignment logic
+            hasMore: hasMoreForThisSection, // Will be false for now
+        });
+    }
+
 
   } catch (error) {
     console.error("Error fetching homepage data: ", error);
     heroItem = null;
     trendingManga = [];
     newReleaseManga = [];
-    allCategories = []; // Reset categories
+    customSections = [];
     hasMoreTrending = false;
     hasMoreNewReleases = false;
   }
 
-  return { heroItem, trendingManga, newReleaseManga, allCategories, hasMoreTrending, hasMoreNewReleases };
+  return { heroItem, trendingManga, newReleaseManga, customSections, hasMoreTrending, hasMoreNewReleases };
 }
 
 
 export default async function HomePage() {
-  const { heroItem, trendingManga, newReleaseManga, allCategories, hasMoreTrending, hasMoreNewReleases } = await getHomePageData();
+  const { heroItem, trendingManga, newReleaseManga, customSections, hasMoreTrending, hasMoreNewReleases } = await getHomePageData();
 
-  const hasAnyContent = trendingManga.length > 0 || newReleaseManga.length > 0 || allCategories.length > 0;
+  const hasAnyContent = trendingManga.length > 0 || newReleaseManga.length > 0 || customSections.some(sec => sec.mangaList.length > 0);
 
   return (
     <div className="flex flex-col min-h-screen bg-neutral-dark">
@@ -189,13 +234,17 @@ export default async function HomePage() {
             />
           )}
           
-          {/* Display Category Grid with category names */}
-          {allCategories.length > 0 && (
-            <CategoryGrid
-              title="Browse by Category"
-              categories={allCategories}
+          {/* Render Custom Sections */}
+          {customSections.map(section => (
+            // MangaGrid will render null if mangaList is empty, which is fine for now
+            <MangaGrid
+              key={section.id}
+              title={section.name}
+              mangaList={section.mangaList} // Will be empty initially
+              // viewAllHref={`/section/${section.slug}`} // Uncomment and implement if sections get dedicated pages
+              hasMore={section.hasMore} // Will be false initially
             />
-          )}
+          ))}
           
           {!hasAnyContent && !heroItem && ( 
             <div className="text-center py-10 text-neutral-extralight">
@@ -211,3 +260,4 @@ export default async function HomePage() {
     </div>
   );
 }
+
