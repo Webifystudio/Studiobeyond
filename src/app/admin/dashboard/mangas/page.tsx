@@ -12,7 +12,6 @@ import { useToast } from "@/hooks/use-toast";
 import { db, serverTimestamp } from '@/lib/firebase';
 import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, Timestamp } from 'firebase/firestore';
 import Image from 'next/image';
-// import { Checkbox } from '@/components/ui/checkbox'; // Genre Checkbox removed
 
 interface Manga {
   id: string;
@@ -21,17 +20,12 @@ interface Manga {
   chapters: number;
   status: string;
   imageUrl: string;
-  genres?: string[]; // Optional now
+  categoryNames?: string[]; // For storing assigned category names
   dataAiHint?: string;
   externalReadLink?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
-
-// interface Genre { // Genre interface removed
-//   id: string;
-//   name: string;
-// }
 
 const initialMangaDetails = {
   title: '',
@@ -39,7 +33,6 @@ const initialMangaDetails = {
   chapters: '',
   status: 'Ongoing',
   imageUrl: '',
-  // selectedGenres: [] as string[], // selectedGenres removed
   dataAiHint: '',
   externalReadLink: '',
 };
@@ -49,10 +42,8 @@ const IMGBB_API_KEY = "2bb2346a6a907388d8a3b0beac2bca86";
 export default function ManageMangasPage() {
   const [mangaDetails, setMangaDetails] = useState(initialMangaDetails);
   const [mangas, setMangas] = useState<Manga[]>([]);
-  // const [allGenres, setAllGenres] = useState<Genre[]>([]); // allGenres state removed
   const [isLoading, setIsLoading] = useState(true); 
   const [isSubmittingManga, setIsSubmittingManga] = useState(false); 
-  // const [isFetchingGenres, setIsFetchingGenres] = useState(true); // isFetchingGenres state removed
   const [selectedCoverFile, setSelectedCoverFile] = useState<File | null>(null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const { toast } = useToast();
@@ -75,11 +66,8 @@ export default function ManageMangasPage() {
     setIsLoading(false);
   };
 
-  // fetchAllGenres function removed
-
   useEffect(() => {
     fetchMangas();
-    // fetchAllGenres(); // Call removed
   }, []);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -127,8 +115,6 @@ export default function ManageMangasPage() {
     setIsUploadingCover(false);
   };
 
-  // handleGenreChange function removed
-
   const handleAddManga = async (e: FormEvent) => {
     e.preventDefault();
     if (!mangaDetails.title.trim() || !mangaDetails.imageUrl.trim()) {
@@ -138,13 +124,13 @@ export default function ManageMangasPage() {
     
     setIsSubmittingManga(true);
     try {
-      const dataToSave: any = {
+      const dataToSave: Partial<Manga> & { createdAt: any, updatedAt: any } = { // Using Partial for optional fields
         title: mangaDetails.title.trim(),
         description: mangaDetails.description.trim(),
         chapters: parseInt(mangaDetails.chapters) || 0,
         status: mangaDetails.status,
         imageUrl: mangaDetails.imageUrl.trim(),
-        // genres: mangaDetails.selectedGenres, // genres field removed from direct save here
+        categoryNames: [], // Initialize with empty array, assignment is separate
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -155,10 +141,6 @@ export default function ManageMangasPage() {
       if (mangaDetails.externalReadLink.trim()) {
         dataToSave.externalReadLink = mangaDetails.externalReadLink.trim();
       }
-      // If genres are still desired in the data model but not managed here,
-      // they'd need to be handled separately or removed from `dataToSave`.
-      // For now, I am assuming the 'genres' field might still exist in Firestore for other purposes or future use,
-      // but it's not being set or modified from this "Add New Manga" form.
       
       await addDoc(collection(db, 'mangas'), dataToSave);
 
@@ -201,7 +183,7 @@ export default function ManageMangasPage() {
             <PlusCircle className="mr-2 h-5 w-5 text-brand-primary" /> Add New Manga
           </CardTitle>
           <CardDescription className="text-neutral-extralight/80">
-            Add a new manga series to the catalog.
+            Add a new manga series to the catalog. Categories are assigned in a separate section.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleAddManga}>
@@ -278,30 +260,6 @@ export default function ManageMangasPage() {
               )}
             </div>
 
-            {/* Genre selection removed */}
-            {/*
-            <div>
-              <Label className="text-neutral-extralight">Genres</Label>
-              {isFetchingGenres ? <p className="text-neutral-extralight/70">Loading genres...</p> : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-2 border border-neutral-light rounded-md bg-neutral-light max-h-40 overflow-y-auto">
-                  {allGenres.length > 0 ? allGenres.map(genre => (
-                    <div key={genre.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`genre-${genre.id}`}
-                        checked={mangaDetails.selectedGenres.includes(genre.name)}
-                        onCheckedChange={() => handleGenreChange(genre.name)}
-                        className="border-neutral-extralight data-[state=checked]:bg-brand-primary data-[state=checked]:text-white"
-                      />
-                      <Label htmlFor={`genre-${genre.id}`} className="text-sm font-medium text-neutral-extralight cursor-pointer">
-                        {genre.name}
-                      </Label>
-                    </div>
-                  )) : <p className="text-neutral-extralight/70 col-span-full">No genres found. Please add genres first.</p>}
-                </div>
-              )}
-            </div>
-            */}
-
             <div>
               <Label htmlFor="externalReadLink" className="text-neutral-extralight">External Read Link (Optional)</Label>
               <Input id="externalReadLink" name="externalReadLink" type="url" value={mangaDetails.externalReadLink} onChange={handleChange} placeholder="https://example.com/read/manga-title" className="bg-neutral-light text-neutral-extralight" />
@@ -348,8 +306,9 @@ export default function ManageMangasPage() {
                   <CardContent className="p-3">
                     <h3 className="font-semibold text-white truncate text-sm md:text-base" title={manga.title}>{manga.title}</h3>
                     <p className="text-xs text-neutral-extralight/80">{manga.status} - {manga.chapters} Chapters</p>
-                    {/* Genre display removed from here too */}
-                    {/* <p className="text-xs text-neutral-extralight/70 truncate" title={manga.genres?.join(', ')}>Genres: {manga.genres?.join(', ')}</p> */}
+                    {manga.categoryNames && manga.categoryNames.length > 0 && (
+                       <p className="text-xs text-neutral-extralight/70 truncate" title={manga.categoryNames.join(', ')}>Categories: {manga.categoryNames.join(', ')}</p>
+                    )}
                     {manga.externalReadLink && (
                       <a href={manga.externalReadLink} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-primary hover:underline flex items-center mt-1">
                          <ExternalLink className="h-3 w-3 mr-1" /> Read Externally
@@ -374,3 +333,5 @@ export default function ManageMangasPage() {
     </div>
   );
 }
+
+    

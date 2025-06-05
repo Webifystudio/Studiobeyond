@@ -39,13 +39,13 @@ export const themes: Theme[] = [
       cardForeground: "210 17% 75%",
       popover: "215 20% 23%",
       popoverForeground: "210 17% 75%",
-      primary: "0 100% 71%", // #FF6B6B
+      primary: "0 100% 71%", // #FF6B6B (Vibrant Coral)
       primaryForeground: "0 0% 100%",
       secondary: "215 15% 35%", // #4A5568
       secondaryForeground: "210 17% 75%",
       muted: "215 15% 30%",
       mutedForeground: "210 17% 55%",
-      accent: "276 47% 73%", // #B19CD9
+      accent: "276 47% 73%", // #B19CD9 (Soft Lavender)
       accentForeground: "216 15% 15%",
       destructive: "0 84.2% 60.2%",
       destructiveForeground: "0 0% 98%",
@@ -60,23 +60,23 @@ export const themes: Theme[] = [
     name: "Light Mode",
     id: "light-mode",
     colors: {
-      background: "0 0% 98%", // #FAFAFA
-      foreground: "222.2 84% 4.9%", // #0C0A09
-      card: "0 0% 100%", // #FFFFFF
+      background: "0 0% 98%", 
+      foreground: "222.2 84% 4.9%", 
+      card: "0 0% 100%", 
       cardForeground: "222.2 84% 4.9%",
       popover: "0 0% 100%",
       popoverForeground: "222.2 84% 4.9%",
-      primary: "262.1 83.3% 57.8%", // #7C3AED
-      primaryForeground: "0 0% 98%", // #FAFAFA
-      secondary: "0 0% 96.1%", // #F5F5F5
-      secondaryForeground: "222.2 47.4% 11.2%", // #1C1917
+      primary: "262.1 83.3% 57.8%", // Purple
+      primaryForeground: "0 0% 98%", 
+      secondary: "0 0% 96.1%", 
+      secondaryForeground: "222.2 47.4% 11.2%", 
       muted: "0 0% 96.1%",
-      mutedForeground: "215.4 16.3% 46.9%", // #78716C
+      mutedForeground: "215.4 16.3% 46.9%", 
       accent: "32 95% 60%", // Orange accent
       accentForeground: "20 80% 15%", // Dark Brown/Black for text on orange
       destructive: "0 84.2% 60.2%",
       destructiveForeground: "0 0% 98%",
-      border: "0 0% 89.8%", // #E5E5E5
+      border: "0 0% 89.8%", 
       input: "0 0% 89.8%",
       ring: "262.1 83.3% 57.8%",
     },
@@ -141,27 +141,27 @@ export const themes: Theme[] = [
   },
   {
     name: "Oceanic Depths",
-    id: "oceanic-depths", // Was oceanic-blue
+    id: "oceanic-depths",
     colors: {
-      background: "205 60% 12%", // Darker Blue
-      foreground: "190 25% 90%", // Lighter Cyan/Gray
+      background: "205 60% 12%", 
+      foreground: "190 25% 90%", 
       card: "205 50% 18%",
       cardForeground: "190 25% 90%",
       popover: "205 50% 18%",
       popoverForeground: "190 25% 90%",
-      primary: "180 100% 40%", // Teal
-      primaryForeground: "0 0% 100%",
+      primary: "180 100% 65%", // Lighter Teal (was L: 40%)
+      primaryForeground: "205 60% 10%", // Darker for contrast
       secondary: "205 40% 28%",
       secondaryForeground: "190 25% 90%",
       muted: "205 40% 22%",
       mutedForeground: "190 20% 70%",
-      accent: "170 100% 50%", // Bright Sea Green
+      accent: "170 100% 60%", // Lighter Sea Green
       accentForeground: "205 60% 8%",
       destructive: "0 70% 55%",
       destructiveForeground: "0 0% 100%",
       border: "205 40% 28%",
       input: "205 40% 28%",
-      ring: "180 100% 40%",
+      ring: "180 100% 65%",
     },
     fontFamilyBody: "'Open Sans', sans-serif",
     fontFamilyHeadline: "'Raleway', sans-serif",
@@ -169,16 +169,16 @@ export const themes: Theme[] = [
   },
   {
     name: "Forest Whisper",
-    id: "forest-whisper", // Was forest-green
+    id: "forest-whisper",
     colors: {
-      background: "120 30% 10%", // Darker Forest Green
-      foreground: "90 15% 85%", // Light Moss Green
+      background: "120 30% 10%", 
+      foreground: "90 15% 85%", 
       card: "120 25% 15%",
       cardForeground: "90 15% 85%",
       popover: "120 25% 15%",
       popoverForeground: "90 15% 85%",
-      primary: "90 65% 40%", // Rich Leaf Green
-      primaryForeground: "0 0% 100%",
+      primary: "90 65% 60%", // Lighter Leaf Green (was L: 40%)
+      primaryForeground: "120 30% 10%", // Darker for contrast
       secondary: "120 20% 25%",
       secondaryForeground: "90 15% 85%",
       muted: "120 20% 20%",
@@ -189,7 +189,7 @@ export const themes: Theme[] = [
       destructiveForeground: "0 0% 100%",
       border: "120 20% 25%",
       input: "120 20% 25%",
-      ring: "90 65% 40%",
+      ring: "90 65% 60%",
     },
     fontFamilyBody: "'Lato', sans-serif",
     fontFamilyHeadline: "'Merriweather', serif",
@@ -204,22 +204,22 @@ export const themes: Theme[] = [
       cardForeground: "0 5% 80%",
       popover: "0 10% 12%",
       popoverForeground: "0 5% 80%",
-      primary: "0 70% 50%", // Deep Crimson
+      primary: "0 80% 65%", // Lighter Crimson (was L: 50%)
       primaryForeground: "0 0% 100%",
       secondary: "0 8% 20%",
       secondaryForeground: "0 5% 80%",
       muted: "0 8% 15%",
       mutedForeground: "0 5% 60%",
-      accent: "30 80% 55%", // Dark Orange
+      accent: "30 80% 60%", // Lighter Dark Orange
       accentForeground: "0 0% 100%",
       destructive: "0 70% 50%",
       destructiveForeground: "0 0% 100%",
       border: "0 8% 20%",
       input: "0 8% 20%",
-      ring: "0 70% 50%",
+      ring: "0 80% 65%",
     },
     fontFamilyBody: "'Inter', sans-serif",
-    fontFamilyHeadline: "'Cinzel', serif", // Needs to be added to layout
+    fontFamilyHeadline: "'Cinzel', serif", 
   },
   {
     name: "Monochrome Cool",
@@ -231,19 +231,19 @@ export const themes: Theme[] = [
       cardForeground: "220 10% 20%",
       popover: "0 0% 100%",
       popoverForeground: "220 10% 20%",
-      primary: "220 20% 40%", // Cool Grey-Blue
-      primaryForeground: "0 0% 100%",
+      primary: "220 25% 65%", // Lighter Grey-Blue (was L: 40%)
+      primaryForeground: "220 10% 15%", // Darker for contrast
       secondary: "210 10% 90%",
       secondaryForeground: "220 10% 30%",
       muted: "210 10% 85%",
       mutedForeground: "220 10% 50%",
-      accent: "200 30% 50%", // Slightly brighter blue
+      accent: "200 30% 50%", 
       accentForeground: "0 0% 100%",
       destructive: "0 60% 50%",
       destructiveForeground: "0 0% 100%",
       border: "210 10% 85%",
       input: "210 10% 85%",
-      ring: "220 20% 40%",
+      ring: "220 25% 65%",
     },
     fontFamilyBody: "'Inter', sans-serif",
     fontFamilyHeadline: "'Inter', sans-serif",

@@ -41,7 +41,7 @@ interface CustomPageData {
   landingImageUrl?: string;
   dataAiHint?: string;
   views: number;
-  likes: number; 
+  likes?: number; // Ensure this field can exist
   defaultReadingMode?: 'horizontal' | 'vertical';
   createdAt: Timestamp;
 }
@@ -93,6 +93,7 @@ export default function PublicCustomPage() {
   const [hasLiked, setHasLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [isLiking, setIsLiking] = useState(false);
+
   const [comments, setComments] = useState<CommentDoc[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isPostingComment, setIsPostingComment] = useState(false);
@@ -113,7 +114,7 @@ export default function PublicCustomPage() {
     return () => unsubscribe();
   }, []); 
 
-  const checkIfUserLiked = async (userId: string, pageId: string) => {
+  const checkIfUserLiked = useCallback(async (userId: string, pageId: string) => {
     if (!userId || !pageId) return;
     const likeRef = doc(db, 'customPages', pageId, 'likes', userId);
     try {
@@ -121,64 +122,58 @@ export default function PublicCustomPage() {
         setHasLiked(docSnap.exists());
     } catch (error) {
         console.error("Error checking if user liked:", error);
-        setHasLiked(false);
+        setHasLiked(false); // Default to not liked on error
     }
-  };
+  }, []);
   
-  useEffect(() => {
+  const fetchPageAndRelatedData = useCallback(async () => {
     if (!pageSlug) return;
+    setIsLoading(true);
+    try {
+      const pagesRef = collection(db, 'customPages');
+      const q = query(pagesRef, where('pageSlug', '==', pageSlug), limit(1));
+      const querySnapshot = await getDocs(q);
 
-    const fetchAndIncrementView = async () => {
-      setIsLoading(true);
-      try {
-        const pagesRef = collection(db, 'customPages');
-        const q = query(pagesRef, where('pageSlug', '==', pageSlug));
-        const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const docSnap = querySnapshot.docs[0];
+        const data = { id: docSnap.id, ...docSnap.data(), views: docSnap.data().views || 0, likes: docSnap.data().likes || 0 } as CustomPageData;
+        setPageData(data);
+        setCurrentViewCount(data.views); 
+        setReadingMode(data.defaultReadingMode || 'horizontal');
+        setLikeCount(data.likes || 0);
 
-        if (!querySnapshot.empty) {
-          const docSnap = querySnapshot.docs[0];
-          const data = { id: docSnap.id, ...docSnap.data(), views: docSnap.data().views || 0, likes: docSnap.data().likes || 0 } as CustomPageData;
-          setPageData(data);
-          setCurrentViewCount(data.views); 
-          setReadingMode(data.defaultReadingMode || 'horizontal');
-          setLikeCount(data.likes || 0); 
-
-          if (currentUser) {
-            checkIfUserLiked(currentUser.uid, data.id);
-          }
-          fetchComments(data.id);
-
-          const viewedKey = `viewed-page-${data.id}`;
-          if (typeof window !== 'undefined' && localStorage.getItem(viewedKey) !== 'true') { 
-            const pageDocRef = doc(db, 'customPages', docSnap.id);
-            await updateDoc(pageDocRef, {
-              views: increment(1)
-            });
-            setCurrentViewCount(prev => prev + 1); 
-            localStorage.setItem(viewedKey, 'true');
-          }
-          
-          fetchChapters(docSnap.id);
-
-        } else {
-          console.log(`No custom page found with slug: ${pageSlug}`);
-          setPageData(null); 
+        if (currentUser?.uid) {
+          checkIfUserLiked(currentUser.uid, data.id);
         }
-      } catch (error) {
-        console.error("Error fetching or updating custom page data: ", error);
-        toast({ title: "Error", description: "Could not load page data.", variant: "destructive" });
-      }
-      setIsLoading(false);
-    };
+        fetchComments(data.id); // Fetch comments after page data is set
 
-    fetchAndIncrementView();
-  }, [pageSlug, toast, currentUser]); 
+        const viewedKey = `viewed-page-${data.id}`;
+        if (typeof window !== 'undefined' && !localStorage.getItem(viewedKey)) { 
+          const pageDocRef = doc(db, 'customPages', docSnap.id);
+          await updateDoc(pageDocRef, { views: increment(1) });
+          setCurrentViewCount(prev => prev + 1); 
+          localStorage.setItem(viewedKey, 'true');
+        }
+        
+        fetchChapters(docSnap.id); // Fetch chapters after page data is set
+
+      } else {
+        console.log(`No custom page found with slug: ${pageSlug}`);
+        setPageData(null); 
+        setLikeCount(0);
+        setHasLiked(false);
+      }
+    } catch (error) {
+      console.error("Error fetching or updating custom page data: ", error);
+      toast({ title: "Error", description: "Could not load page data.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [pageSlug, currentUser, checkIfUserLiked, toast]);
 
   useEffect(() => {
-    if (pageData?.id && currentUser?.uid) {
-        checkIfUserLiked(currentUser.uid, pageData.id);
-    }
-  }, [pageData?.id, currentUser?.uid]);
+    fetchPageAndRelatedData();
+  }, [fetchPageAndRelatedData]);
 
 
   const fetchChapters = async (currentPageId: string) => {
@@ -208,9 +203,9 @@ export default function PublicCustomPage() {
       const snapshot = await getDocs(commentsQuery);
       const commentsData = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as CommentDoc));
       setComments(commentsData);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching comments:", error);
-      toast({ title: "Error", description: "Could not load comments.", variant: "destructive"});
+      toast({ title: "Error", description: error.message || "Could not load comments.", variant: "destructive"});
     }
     setIsLoadingComments(false);
   };
@@ -341,7 +336,7 @@ export default function PublicCustomPage() {
         return prev > 0 ? prev - 1 : prev;
       }
     });
-  }, [selectedChapter, readingMode, setCurrentImageIndex]);
+  }, [selectedChapter, readingMode]);
 
   const navigateChapter = (direction: 'next' | 'prev') => {
     if (!selectedChapter) return;
@@ -358,18 +353,18 @@ export default function PublicCustomPage() {
   );
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (readingMode !== 'horizontal') return;
+    if (readingMode !== 'horizontal' || !selectedChapter?.imageUrls?.length) return;
     setTouchStartX(e.targetTouches[0].clientX);
     setTouchEndX(null); 
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (readingMode !== 'horizontal' || touchStartX === null) return;
+    if (readingMode !== 'horizontal' || touchStartX === null || !selectedChapter?.imageUrls?.length) return;
     setTouchEndX(e.targetTouches[0].clientX);
   };
 
   const handleTouchEnd = () => {
-    if (readingMode !== 'horizontal' || touchStartX === null || touchEndX === null) return;
+    if (readingMode !== 'horizontal' || touchStartX === null || touchEndX === null || !selectedChapter?.imageUrls?.length) return;
 
     const deltaX = touchEndX - touchStartX;
 
@@ -385,7 +380,7 @@ export default function PublicCustomPage() {
   };
 
   useEffect(() => {
-    if (!selectedChapter || readingMode !== 'horizontal') return;
+    if (!selectedChapter || readingMode !== 'horizontal' || !selectedChapter?.imageUrls?.length) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'ArrowLeft') {
@@ -448,7 +443,7 @@ export default function PublicCustomPage() {
 
   if (selectedChapter) {
     const totalImages = selectedChapter.imageUrls.length;
-    const currentImageUrl = selectedChapter.imageUrls[currentImageIndex];
+    const currentImageUrl = totalImages > 0 ? selectedChapter.imageUrls[currentImageIndex] : null;
     const currentChapterIndexInList = chapters.findIndex(ch => ch.id === selectedChapter.id);
 
     return (
@@ -462,6 +457,7 @@ export default function PublicCustomPage() {
             <h2 className="text-xs sm:text-base font-semibold truncate " title={selectedChapter.name}>{selectedChapter.name}</h2>
             {readingMode === 'horizontal' && totalImages > 0 && <p className="text-xs text-neutral-400">Page {currentImageIndex + 1} of {totalImages}</p>}
             {readingMode === 'vertical' && totalImages > 0 && <p className="text-xs text-neutral-400">{totalImages} Pages (Scroll)</p>}
+            {totalImages === 0 && <p className="text-xs text-neutral-400">No Images</p>}
           </div>
           <div className="flex items-center gap-1 sm:gap-2">
             <TooltipProvider delayDuration={300}>
@@ -503,14 +499,16 @@ export default function PublicCustomPage() {
           </div>
         </nav>
 
-        <main className={`flex-grow pt-16 pb-16 sm:pt-20 sm:pb-20 overflow-hidden ${readingMode === 'vertical' ? 'overflow-y-auto' : ''}`}>
+        <main 
+          className={`flex-grow pt-16 pb-16 sm:pt-20 sm:pb-20 overflow-hidden ${readingMode === 'vertical' ? 'overflow-y-auto' : ''}`}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           {readingMode === 'horizontal' && totalImages > 0 && currentImageUrl && (
              <div
                 ref={imageContainerRef}
                 className="flex items-center justify-center h-full w-full cursor-grab active:cursor-grabbing"
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
                 style={{ touchAction: 'pan-y' }} 
               >
                 <Image
@@ -519,10 +517,10 @@ export default function PublicCustomPage() {
                 alt={`Page ${currentImageIndex + 1} of ${selectedChapter.name}`}
                 width={800} 
                 height={1200} 
-                className="max-w-full max-h-full object-contain select-none" // Added select-none
+                className="max-w-full max-h-full object-contain select-none"
                 data-ai-hint="manga page"
                 priority={currentImageIndex < 2} 
-                draggable="false" // Prevent browser default image drag
+                draggable="false" 
                 onError={(e) => (e.currentTarget.src = 'https://placehold.co/800x1200/000000/FFFFFF?text=Error+Loading+Image')}
                 />
             </div>
@@ -552,7 +550,6 @@ export default function PublicCustomPage() {
         </main>
         
         <footer className="fixed bottom-0 left-0 right-0 z-50 p-2 sm:p-3 flex justify-center items-center bg-black/80 backdrop-blur-sm">
-          {/* Previous and Next page buttons removed for horizontal mode in favor of swipe/keyboard */}
           <Button variant="ghost" size="icon" onClick={closeChapterViewer} className="hover:bg-white/10">
             <CloseIcon className="h-5 w-5 sm:h-6 sm:w-6" />
             <span className="sr-only">Close Viewer</span>
@@ -643,7 +640,7 @@ export default function PublicCustomPage() {
                         variant="ghost" 
                         className={cn("text-white p-1.5 group rounded-full flex items-center", hasLiked ? "text-brand-primary hover:text-brand-primary/80" : "hover:text-brand-primary")} 
                         onClick={handleLike} 
-                        disabled={isLiking}
+                        disabled={isLiking || !pageData}
                         aria-label={hasLiked ? "Unlike this page" : "Like this page"}
                         aria-pressed={hasLiked}
                     >
@@ -752,12 +749,13 @@ export default function PublicCustomPage() {
             </article>
           </div>
         </section>
-
-        {showCommentBox && (
-            <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-neutral-dark">
+        
+        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-neutral-dark">
+           {showCommentBox && (
+            <div className="mb-8">
                 <h3 className="text-xl font-semibold text-white mb-4">Leave a Comment</h3>
                  {currentUser ? (
-                    <form onSubmit={handlePostComment} className="mb-6 space-y-3 bg-neutral-medium p-4 rounded-lg">
+                    <form onSubmit={handlePostComment} className="space-y-3 bg-neutral-medium p-4 rounded-lg shadow-md">
                         <div className="flex items-start space-x-3">
                             <Avatar className="h-10 w-10 mt-1 shrink-0">
                                 <AvatarImage src={currentUser.photoURL || undefined} alt={currentUser.displayName || "User"}/>
@@ -781,18 +779,17 @@ export default function PublicCustomPage() {
                         </div>
                     </form>
                 ) : (
-                    <p className="text-neutral-extralight/70 mb-4 p-4 bg-neutral-medium rounded-lg">
+                    <p className="text-neutral-extralight/70 p-4 bg-neutral-medium rounded-lg shadow-md">
                         <Link href="/login" className="text-brand-primary hover:underline">Log in</Link> to post a comment.
                     </p>
                 )}
-            </section>
-        )}
+            </div>
+           )}
 
-        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-neutral-dark">
             <h3 className="text-xl font-semibold text-white mb-4">
-                {comments.length > 0 ? `Comments (${comments.length})` : (isLoadingComments ? 'Loading Comments...' : 'Comments')}
+                {isLoadingComments ? 'Loading Comments...' : `Comments (${comments.length})`}
             </h3>
-            {isLoadingComments && !comments.length ? (
+            {isLoadingComments && comments.length === 0 ? (
                 <div className="space-y-4">
                     {[...Array(2)].map((_, i) => (
                         <div key={i} className="flex items-start space-x-3 bg-neutral-medium p-3 rounded-lg shadow">
@@ -831,7 +828,7 @@ export default function PublicCustomPage() {
                     </div>
                 </ScrollArea>
             ) : (
-                !isLoadingComments && <p className="text-neutral-extralight/70 p-4 bg-neutral-medium rounded-lg text-center">No comments yet. Be the first to comment!</p>
+                !isLoadingComments && <p className="text-neutral-extralight/70 p-4 bg-neutral-medium rounded-lg text-center shadow-md">No comments yet. Be the first to comment!</p>
             )}
         </section>
         
@@ -879,3 +876,4 @@ export default function PublicCustomPage() {
   );
 }
 
+    

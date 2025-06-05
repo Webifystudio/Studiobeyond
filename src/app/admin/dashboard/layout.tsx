@@ -6,15 +6,15 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { LayoutDashboard, BookOpen, Image as ImageIcon, LogOut, Home, FileText, Settings, Menu as MenuIcon } from 'lucide-react'; // Removed Tag, Link2
+import { LayoutDashboard, BookOpen, Image as ImageIcon, LogOut, Home, FileText, Settings, Menu as MenuIcon, Tag, Link2 as Link2Icon, ListChecks } from 'lucide-react'; 
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  // { href: '/admin/dashboard/genres', label: 'Manage Genres', icon: Tag }, // Removed
+  { href: '/admin/dashboard/categories', label: 'Manage Categories', icon: ListChecks },
   { href: '/admin/dashboard/mangas', label: 'Manage Mangas', icon: BookOpen },
-  // { href: '/admin/dashboard/assign-manga-genre', label: 'Assign Manga to Genre', icon: Link2 }, // Removed
+  { href: '/admin/dashboard/assign-manga-category', label: 'Assign Manga to Category', icon: Tag },
   { href: '/admin/dashboard/slider', label: 'Manage Slider', icon: ImageIcon },
   { href: '/admin/dashboard/pages', label: 'Manage Pages', icon: FileText },
 ];
@@ -174,3 +174,5 @@ export default function AdminDashboardLayout({
     </div>
   );
 }
+
+    
