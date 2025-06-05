@@ -28,7 +28,7 @@ interface MangaDoc {
   status: string;
   imageUrl: string;
   dataAiHint?: string;
-  sectionId?: string; // For querying manga by custom section
+  sectionId?: string; 
   genres?: string[]; 
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -38,7 +38,7 @@ interface MangaDoc {
 interface SectionDoc {
   id: string;
   name: string;
-  slug: string;
+  slug: string; // Slug for the section, useful for potential future "View All" links
   createdAt: Timestamp;
 }
 
@@ -120,11 +120,12 @@ async function getHomePageData() {
     hasMoreNewReleases = allNewReleases.length > ITEMS_PER_SECTION_PREVIEW;
 
     // Fetch Custom Sections and their Manga
-    const sectionsQuery = query(collection(db, 'sections'), orderBy('createdAt', 'asc'));
+    const sectionsQuery = query(collection(db, 'sections'), orderBy('createdAt', 'asc')); // Order by creation or a custom order field
     const sectionsSnapshot = await getDocs(sectionsQuery);
     for (const sectionDoc of sectionsSnapshot.docs) {
         const sectionData = { id: sectionDoc.id, ...sectionDoc.data() } as SectionDoc;
         
+        // Fetch manga assigned to this section
         const mangaForSectionQuery = query(
           collection(db, 'mangas'),
           where("sectionId", "==", sectionData.id),
@@ -146,7 +147,8 @@ async function getHomePageData() {
         const sectionMangaList = allMangaForSection.slice(0, ITEMS_PER_SECTION_PREVIEW);
         const hasMoreForThisSection = allMangaForSection.length > ITEMS_PER_SECTION_PREVIEW;
 
-        if (sectionMangaList.length > 0) { // Only add section if it has manga
+        // Only add section to homepage if it has manga assigned
+        if (sectionMangaList.length > 0) {
             customSections.push({
                 id: sectionData.id,
                 name: sectionData.name,
@@ -159,6 +161,7 @@ async function getHomePageData() {
 
   } catch (error) {
     console.error("Error fetching homepage data: ", error);
+    // Reset all data to ensure a clean state on error
     heroItem = null;
     trendingManga = [];
     newReleaseManga = [];
@@ -231,10 +234,10 @@ export default async function HomePage() {
               key={section.id}
               title={section.name}
               mangaList={section.mangaList}
-              // For view all, you might need a generic section page or link to a search/filter later
-              // For now, let's assume a "View All" for a custom section might not be directly implemented
-              // or would require a more complex routing/page like /section/[sectionSlug]
-              // viewAllHref={`/section/${section.slug}`} // Placeholder if you create such pages
+              // For 'View All', you might need a generic page like /section/[sectionSlug]
+              // This could link to a search page pre-filtered by sectionId, or a dedicated page if you create one.
+              // For now, if 'hasMore' is true, it will show 'View All' but it won't link anywhere specific for custom sections yet.
+              // viewAllHref={section.hasMore ? `/sections/${section.slug}` : undefined} // Example if /sections/[slug] pages existed
               hasMore={section.hasMore} 
             />
           ))}
@@ -253,4 +256,3 @@ export default async function HomePage() {
     </div>
   );
 }
-
