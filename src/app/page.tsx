@@ -2,6 +2,7 @@
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { HeroSection } from '@/components/manga/hero-section';
+import { CategoryGrid, type CategoryItem } from '@/components/manga/category-grid';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy, limit, type Timestamp } from 'firebase/firestore';
 
@@ -18,8 +19,16 @@ interface SliderItemDoc {
   createdAt: Timestamp;
 }
 
+interface CategoryDoc {
+  id: string;
+  name: string;
+  slug: string;
+  createdAt: Timestamp;
+}
+
 async function getHomePageData() {
   let heroItem: SliderItemDoc | null = null;
+  let categories: CategoryItem[] = [];
 
   // Fetch Hero Item
   try {
@@ -40,15 +49,30 @@ async function getHomePageData() {
     }
   } catch (error) {
     console.error("Error fetching hero item:", error);
-    heroItem = null; 
   }
 
-  return { heroItem };
+  // Fetch Categories
+  try {
+    const categoriesQuery = query(collection(db, 'categories'), orderBy('name', 'asc'));
+    const categoriesSnapshot = await getDocs(categoriesQuery);
+    categories = categoriesSnapshot.docs.map(doc => {
+      const data = doc.data() as Omit<CategoryDoc, 'id'>;
+      return {
+        id: doc.id,
+        name: data.name,
+        href: `/category/${encodeURIComponent(data.slug)}`, // Link to category specific page
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+  }
+
+  return { heroItem, categories };
 }
 
 
 export default async function HomePage() {
-  const { heroItem } = await getHomePageData();
+  const { heroItem, categories } = await getHomePageData();
 
   return (
     <div className="flex flex-col min-h-screen bg-neutral-dark">
@@ -79,11 +103,14 @@ export default async function HomePage() {
         )}
         
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {/* Content sections previously here are now removed */}
-            {!heroItem && ( 
+          {categories.length > 0 && (
+            <CategoryGrid title="Browse by Category" categories={categories} />
+          )}
+
+          {!heroItem && categories.length === 0 && ( 
                 <div className="text-center py-10 text-neutral-extralight">
                 <p className="text-xl mb-2">Homepage content is being prepared!</p>
-                <p>Check back soon or add a hero item in the admin panel.</p>
+                <p>Add a hero item or categories in the admin panel to populate the homepage.</p>
                 </div>
             )}
         </div>

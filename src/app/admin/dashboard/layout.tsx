@@ -12,12 +12,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose 
 
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  // { href: '/admin/dashboard/sections', label: 'Manage Sections', icon: SectionsIcon }, // Removed
-  // { href: '/admin/dashboard/categories', label: 'Manage Categories', icon: ListChecks }, // Removed
+  { href: '/admin/dashboard/categories', label: 'Manage Categories', icon: ListChecks },
   { href: '/admin/dashboard/mangas', label: 'Manage Mangas', icon: BookOpen },
-  // { href: '/admin/dashboard/assign-manga-category', label: 'Assign Manga to Category', icon: Tag }, // Removed
-  // { href: '/admin/dashboard/assign-manga-genre', label: 'Assign Manga to Genre', icon: Tag }, // Removed (assuming Tag was for genre too)
-  { href: '/admin/dashboard/genres', label: 'Manage Genres', icon: Tag }, // Kept Manage Genres
+  { href: '/admin/dashboard/genres', label: 'Manage Genres', icon: Tag },
   { href: '/admin/dashboard/slider', label: 'Manage Slider', icon: ImageIcon },
   { href: '/admin/dashboard/pages', label: 'Manage Pages', icon: FileText },
 ];
@@ -180,3 +177,4 @@ export default function AdminDashboardLayout({
     </div>
   );
 }
+
