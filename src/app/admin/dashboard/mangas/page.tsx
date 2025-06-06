@@ -11,7 +11,8 @@ import { PlusCircle, List, Trash2, ExternalLink, UploadCloud } from 'lucide-reac
 import { useToast } from "@/hooks/use-toast";
 import { db, serverTimestamp, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, Timestamp } from '@/lib/firebase';
 import Image from 'next/image';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// Select component is no longer needed for sections
+// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Manga {
   id: string;
@@ -20,21 +21,23 @@ interface Manga {
   chapters: number;
   status: string;
   imageUrl: string;
-  categoryNames?: string[];
+  // categoryNames?: string[]; // Removed
   dataAiHint?: string;
   externalReadLink?: string;
-  sectionId?: string; 
+  // sectionId?: string; // Removed
+  genres?: string[]; // Kept genres as Manage Genres page is still there
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
 
-interface Section {
-  id: string;
-  name: string;
-  slug: string;
-}
+// Section interface is no longer needed here
+// interface Section {
+//   id: string;
+//   name: string;
+//   slug: string;
+// }
 
-const NO_SECTION_VALUE = "NONE_INTERNAL_VALUE"; // Unique value for "No Section" option
+// const NO_SECTION_VALUE = "NONE_INTERNAL_VALUE"; // Removed
 
 const initialMangaDetails = {
   title: '',
@@ -44,7 +47,7 @@ const initialMangaDetails = {
   imageUrl: '',
   dataAiHint: '',
   externalReadLink: '',
-  selectedSectionId: '', 
+  // selectedSectionId: '', // Removed
 };
 
 const IMGBB_API_KEY = "2bb2346a6a907388d8a3b0beac2bca86"; 
@@ -57,8 +60,9 @@ export default function ManageMangasPage() {
   const [selectedCoverFile, setSelectedCoverFile] = useState<File | null>(null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   
-  const [allSections, setAllSections] = useState<Section[]>([]);
-  const [isLoadingSections, setIsLoadingSections] = useState(true);
+  // Section related state is no longer needed
+  // const [allSections, setAllSections] = useState<Section[]>([]);
+  // const [isLoadingSections, setIsLoadingSections] = useState(true);
   
   const { toast } = useToast();
 
@@ -68,9 +72,9 @@ export default function ManageMangasPage() {
       const mangasCollection = collection(db, 'mangas');
       const q = query(mangasCollection, orderBy('updatedAt', 'desc'));
       const querySnapshot = await getDocs(q);
-      const mangaslist = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+      const mangaslist = querySnapshot.docs.map(docSnap => ({ // Renamed doc to docSnap to avoid conflict
+        id: docSnap.id,
+        ...docSnap.data()
       } as Manga));
       setMangas(mangaslist);
     } catch (error) {
@@ -80,28 +84,12 @@ export default function ManageMangasPage() {
     setIsLoading(false);
   };
 
-  const fetchSections = async () => {
-    setIsLoadingSections(true);
-    try {
-      const sectionsCollection = collection(db, 'sections');
-      const q = query(sectionsCollection, orderBy('name', 'asc'));
-      const querySnapshot = await getDocs(q);
-      const sectionsList = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        name: doc.data().name,
-        slug: doc.data().slug,
-      } as Section));
-      setAllSections(sectionsList);
-    } catch (error) {
-      console.error("Error fetching sections: ", error);
-      toast({ title: "Error", description: "Could not fetch sections.", variant: "destructive" });
-    }
-    setIsLoadingSections(false);
-  };
+  // Fetching sections is no longer needed
+  // const fetchSections = async () => { ... };
 
   useEffect(() => {
     fetchMangas();
-    fetchSections();
+    // fetchSections(); // Removed
   }, []);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -109,11 +97,8 @@ export default function ManageMangasPage() {
     setMangaDetails(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleSectionChange = (value: string) => {
-    // If the special "No Section" value is selected, set state to empty string,
-    // otherwise use the actual section ID.
-    setMangaDetails(prev => ({ ...prev, selectedSectionId: value === NO_SECTION_VALUE ? "" : value }));
-  };
+  // handleSectionChange is no longer needed
+  // const handleSectionChange = (value: string) => { ... };
 
   const handleCoverFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -164,13 +149,15 @@ export default function ManageMangasPage() {
     
     setIsSubmittingManga(true);
     try {
-      const dataToSave: Partial<Manga> & { createdAt: any, updatedAt: any } = { 
+      // Adjusted dataToSave to remove sectionId and categoryNames
+      const dataToSave: Partial<Omit<Manga, 'id' | 'createdAt' | 'updatedAt' | 'genres'>> & { createdAt: any, updatedAt: any, genres?: string[] } = { 
         title: mangaDetails.title.trim(),
         description: mangaDetails.description.trim(),
         chapters: parseInt(mangaDetails.chapters) || 0,
         status: mangaDetails.status,
         imageUrl: mangaDetails.imageUrl.trim(),
-        categoryNames: [], 
+        // categoryNames: [], // Removed
+        genres: [], // Initialize genres if needed, or handle assignment elsewhere
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -181,10 +168,10 @@ export default function ManageMangasPage() {
       if (mangaDetails.externalReadLink.trim()) {
         dataToSave.externalReadLink = mangaDetails.externalReadLink.trim();
       }
-      // Only add sectionId if it's a non-empty string
-      if (mangaDetails.selectedSectionId && mangaDetails.selectedSectionId.trim() !== "") {
-        dataToSave.sectionId = mangaDetails.selectedSectionId;
-      }
+      // sectionId logic removed
+      // if (mangaDetails.selectedSectionId && mangaDetails.selectedSectionId.trim() !== "") {
+      //   dataToSave.sectionId = mangaDetails.selectedSectionId;
+      // }
       
       await addDoc(collection(db, 'mangas'), dataToSave);
 
@@ -216,11 +203,8 @@ export default function ManageMangasPage() {
     }
   };
 
-  const getSectionNameById = (sectionId?: string) => {
-    if (!sectionId) return 'N/A';
-    const section = allSections.find(s => s.id === sectionId);
-    return section ? section.name : 'Unknown Section';
-  };
+  // getSectionNameById is no longer needed
+  // const getSectionNameById = (sectionId?: string) => { ... };
 
 
   return (
@@ -233,7 +217,7 @@ export default function ManageMangasPage() {
             <PlusCircle className="mr-2 h-5 w-5 text-brand-primary" /> Add New Manga
           </CardTitle>
           <CardDescription className="text-neutral-extralight/80">
-            Add a new manga series to the catalog. Categories are assigned in a separate section.
+            Add a new manga series to the catalog. Genres are assigned in "Manage Genres".
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleAddManga}>
@@ -267,24 +251,11 @@ export default function ManageMangasPage() {
               </div>
             </div>
             
-            <div>
+            {/* Section Select Removed */}
+            {/* <div>
               <Label htmlFor="selectedSectionId" className="text-neutral-extralight">Homepage Section (Optional)</Label>
-              <Select value={mangaDetails.selectedSectionId} onValueChange={handleSectionChange} disabled={isLoadingSections || isSubmittingManga}>
-                <SelectTrigger id="selectedSectionId" className="w-full bg-neutral-light border-neutral-light text-neutral-extralight focus:ring-brand-primary">
-                  <SelectValue placeholder={isLoadingSections ? "Loading sections..." : "Select a section"} />
-                </SelectTrigger>
-                <SelectContent className="bg-neutral-light text-neutral-extralight border-neutral-medium">
-                  <SelectItem value={NO_SECTION_VALUE} className="hover:bg-neutral-medium focus:bg-neutral-medium">
-                    -- No Section --
-                  </SelectItem>
-                  {allSections.map(section => (
-                    <SelectItem key={section.id} value={section.id} className="hover:bg-neutral-medium focus:bg-neutral-medium">
-                      {section.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              ... Select component ...
+            </div> */}
 
             <div>
               <Label htmlFor="imageUrl" className="text-neutral-extralight">Cover Image URL</Label>
@@ -319,7 +290,7 @@ export default function ManageMangasPage() {
                     <Image 
                         src={mangaDetails.imageUrl} 
                         alt="Cover preview" 
-                        layout="fill" 
+                        fill
                         objectFit="cover" 
                         key={mangaDetails.imageUrl} 
                         onError={(e) => (e.currentTarget.src = 'https://placehold.co/300x450/2D3748/A0AEC0?text=Invalid+URL')}
@@ -337,7 +308,7 @@ export default function ManageMangasPage() {
               <Label htmlFor="dataAiHint" className="text-neutral-extralight">AI Image Hint (Optional)</Label>
               <Input id="dataAiHint" name="dataAiHint" type="text" value={mangaDetails.dataAiHint} onChange={handleChange} placeholder="e.g., epic battle anime" className="bg-neutral-light text-neutral-extralight" />
             </div>
-            <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white w-full sm:w-auto" disabled={isSubmittingManga || isUploadingCover || isLoadingSections}>
+            <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white w-full sm:w-auto" disabled={isSubmittingManga || isUploadingCover }>
               {isSubmittingManga ? 'Adding Manga...' : 'Add Manga'}
             </Button>
           </CardContent>
@@ -366,7 +337,7 @@ export default function ManageMangasPage() {
                     <Image 
                         src={manga.imageUrl || 'https://placehold.co/300x450.png'} 
                         alt={manga.title} 
-                        layout="fill"
+                        fill
                         objectFit="cover"
                         data-ai-hint={manga.dataAiHint || "manga cover"}
                         onError={(e) => (e.currentTarget.src = 'https://placehold.co/300x450.png')}
@@ -375,11 +346,16 @@ export default function ManageMangasPage() {
                   <CardContent className="p-3">
                     <h3 className="font-semibold text-white truncate text-sm md:text-base" title={manga.title}>{manga.title}</h3>
                     <p className="text-xs text-neutral-extralight/80">{manga.status} - {manga.chapters} Chapters</p>
-                    {manga.categoryNames && manga.categoryNames.length > 0 && (
+                    {/* Categories display removed */}
+                    {/* {manga.categoryNames && manga.categoryNames.length > 0 && (
                        <p className="text-xs text-neutral-extralight/70 truncate" title={manga.categoryNames.join(', ')}>Categories: {manga.categoryNames.join(', ')}</p>
-                    )}
-                     {manga.sectionId && (
+                    )} */}
+                    {/* Section display removed */}
+                    {/* {manga.sectionId && (
                        <p className="text-xs text-neutral-extralight/70 truncate" title={getSectionNameById(manga.sectionId)}>Section: {getSectionNameById(manga.sectionId)}</p>
+                    )} */}
+                    {manga.genres && manga.genres.length > 0 && (
+                       <p className="text-xs text-neutral-extralight/70 truncate" title={manga.genres.join(', ')}>Genres: {manga.genres.join(', ')}</p>
                     )}
                     {manga.externalReadLink && (
                       <a href={manga.externalReadLink} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-primary hover:underline flex items-center mt-1">
@@ -405,4 +381,3 @@ export default function ManageMangasPage() {
     </div>
   );
 }
-    

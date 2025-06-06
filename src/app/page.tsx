@@ -2,10 +2,8 @@
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { HeroSection } from '@/components/manga/hero-section';
-import { MangaGrid, type MangaItem as MangaCardItem } from '@/components/manga/manga-grid';
-import { RecentlyReadMangaGrid } from '@/components/manga/recently-read-manga-grid';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, orderBy, limit, where, type Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, type Timestamp } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic'; 
 
@@ -20,43 +18,8 @@ interface SliderItemDoc {
   createdAt: Timestamp;
 }
 
-interface MangaDoc {
-  id: string;
-  title: string;
-  description: string; 
-  chapters: number;
-  status: string;
-  imageUrl: string;
-  dataAiHint?: string;
-  genres?: string[]; 
-  sectionId?: string; 
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  views?: number;
-}
-
-interface SectionDoc {
-  id: string;
-  name: string;
-  slug: string;
-  createdAt: Timestamp;
-}
-
-interface CustomSectionForHomepage extends SectionDoc {
-  mangaList: MangaCardItem[];
-  hasMoreManga: boolean;
-}
-
-const ITEMS_PER_MANGA_SECTION_PREVIEW = 6;
-const FETCH_LIMIT_FOR_MANGA_HAS_MORE = ITEMS_PER_MANGA_SECTION_PREVIEW + 1;
-
 async function getHomePageData() {
   let heroItem: SliderItemDoc | null = null;
-  let trendingManga: MangaCardItem[] = [];
-  let newReleaseManga: MangaCardItem[] = []; 
-  let customSections: CustomSectionForHomepage[] = [];
-  let hasMoreTrending = false;
-  let hasMoreNewReleases = false;
 
   // Fetch Hero Item
   try {
@@ -80,129 +43,12 @@ async function getHomePageData() {
     heroItem = null; 
   }
 
-  // Fetch Trending Manga
-  try {
-    const trendingQuery = query(collection(db, 'mangas'), orderBy('views', 'desc'), limit(FETCH_LIMIT_FOR_MANGA_HAS_MORE));
-    const trendingSnapshot = await getDocs(trendingQuery);
-    const allTrending = trendingSnapshot.docs.map(doc => {
-      const data = doc.data() as Omit<MangaDoc, 'id'>;
-      return {
-        id: doc.id,
-        title: data.title,
-        chapter: `${data.status} - ${data.chapters} Ch.`, 
-        imageUrl: data.imageUrl,
-        dataAiHint: data.dataAiHint,
-      };
-    });
-    trendingManga = allTrending.slice(0, ITEMS_PER_MANGA_SECTION_PREVIEW);
-    hasMoreTrending = allTrending.length > ITEMS_PER_MANGA_SECTION_PREVIEW;
-  } catch (error) {
-    console.error("Error fetching trending manga:", error);
-    trendingManga = [];
-    hasMoreTrending = false;
-  }
-
-  // Fetch New Release Manga
-  try {
-    const mangaCollectionRef = collection(db, 'mangas');
-    let newReleaseSnapshot = await getDocs(query(mangaCollectionRef, orderBy('updatedAt', 'desc'), limit(FETCH_LIMIT_FOR_MANGA_HAS_MORE)));
-
-    if (newReleaseSnapshot.docs.length < ITEMS_PER_MANGA_SECTION_PREVIEW && newReleaseSnapshot.docs.length < FETCH_LIMIT_FOR_MANGA_HAS_MORE) {
-        const fallbackSnapshot = await getDocs(query(mangaCollectionRef, orderBy('createdAt', 'desc'), limit(FETCH_LIMIT_FOR_MANGA_HAS_MORE)));
-        if (fallbackSnapshot.docs.length > newReleaseSnapshot.docs.length || (newReleaseSnapshot.empty && !fallbackSnapshot.empty) ) {
-            newReleaseSnapshot = fallbackSnapshot;
-        }
-    }
-    const allNewReleases = newReleaseSnapshot.docs.map(doc => {
-        const data = doc.data() as Omit<MangaDoc, 'id'>;
-        return {
-            id: doc.id,
-            title: data.title,
-            chapter: `${data.status} - ${data.chapters} Ch.`,
-            imageUrl: data.imageUrl,
-            dataAiHint: data.dataAiHint,
-        };
-    });
-    newReleaseManga = allNewReleases.slice(0, ITEMS_PER_MANGA_SECTION_PREVIEW);
-    hasMoreNewReleases = allNewReleases.length > ITEMS_PER_MANGA_SECTION_PREVIEW;
-  } catch (error) {
-    console.error("Error fetching new release manga:", error);
-    newReleaseManga = [];
-    hasMoreNewReleases = false;
-  }
-
-  // Fetch Custom Sections and their Manga
-  try {
-    const sectionsQuery = query(collection(db, 'sections'), orderBy('createdAt', 'asc'));
-    const sectionsSnapshot = await getDocs(sectionsQuery);
-    
-    for (const sectionDoc of sectionsSnapshot.docs) {
-        const sectionData = sectionDoc.data() as Omit<SectionDoc, 'id'>;
-        let mangasForSection: MangaCardItem[] = [];
-        let sectionHasMoreManga = false;
-
-        try {
-            let mangaQuery = query(
-                collection(db, 'mangas'),
-                where('sectionId', '==', sectionDoc.id),
-                orderBy('updatedAt', 'desc'), 
-                limit(FETCH_LIMIT_FOR_MANGA_HAS_MORE)
-            );
-            let mangasSnapshot = await getDocs(mangaQuery);
-
-            if (mangasSnapshot.docs.length < ITEMS_PER_MANGA_SECTION_PREVIEW && mangasSnapshot.docs.length < FETCH_LIMIT_FOR_MANGA_HAS_MORE) {
-                const fallbackQuery = query(
-                    collection(db, 'mangas'),
-                    where('sectionId', '==', sectionDoc.id),
-                    orderBy('createdAt', 'desc'),
-                    limit(FETCH_LIMIT_FOR_MANGA_HAS_MORE)
-                );
-                const fallbackSnapshot = await getDocs(fallbackQuery);
-                if (fallbackSnapshot.docs.length > mangasSnapshot.docs.length || (mangasSnapshot.empty && !fallbackSnapshot.empty)) {
-                    mangasSnapshot = fallbackSnapshot;
-                }
-            }
-
-            const allMangaForSection = mangasSnapshot.docs.map(mangaDoc => {
-                const data = mangaDoc.data() as Omit<MangaDoc, 'id'>;
-                return {
-                    id: mangaDoc.id,
-                    title: data.title,
-                    chapter: `${data.status} - ${data.chapters} Ch.`,
-                    imageUrl: data.imageUrl,
-                    dataAiHint: data.dataAiHint,
-                };
-            });
-            mangasForSection = allMangaForSection.slice(0, ITEMS_PER_MANGA_SECTION_PREVIEW);
-            sectionHasMoreManga = allMangaForSection.length > ITEMS_PER_MANGA_SECTION_PREVIEW;
-            
-        } catch (mangaFetchError) {
-            console.error(`Error fetching manga for section ${sectionData.name || sectionDoc.id}:`, mangaFetchError);
-        }
-        
-        if (mangasForSection.length > 0) { 
-             customSections.push({
-                id: sectionDoc.id,
-                name: sectionData.name,
-                slug: sectionData.slug,
-                createdAt: sectionData.createdAt,
-                mangaList: mangasForSection,
-                hasMoreManga: sectionHasMoreManga,
-            });
-        }
-    }
-  } catch (error) {
-    console.error("Error fetching custom sections list:", error);
-  }
-
-  return { heroItem, trendingManga, newReleaseManga, customSections, hasMoreTrending, hasMoreNewReleases };
+  return { heroItem };
 }
 
 
 export default async function HomePage() {
-  const { heroItem, trendingManga, newReleaseManga, customSections, hasMoreTrending, hasMoreNewReleases } = await getHomePageData();
-
-  const hasAnyContent = trendingManga.length > 0 || newReleaseManga.length > 0 || customSections.some(sec => sec.mangaList.length > 0) || heroItem;
+  const { heroItem } = await getHomePageData();
 
   return (
     <div className="flex flex-col min-h-screen bg-neutral-dark">
@@ -233,47 +79,16 @@ export default async function HomePage() {
         )}
         
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <RecentlyReadMangaGrid />
-
-          {trendingManga.length > 0 && (
-            <MangaGrid 
-                title="Trending This Week" 
-                mangaList={trendingManga} 
-                viewAllHref="/popular" 
-                hasMore={hasMoreTrending}
-            />
-          )}
-
-          {newReleaseManga.length > 0 && (
-            <MangaGrid 
-                title="New Releases" 
-                mangaList={newReleaseManga} 
-                viewAllHref="/latest" 
-                hasMore={hasMoreNewReleases}
-            />
-          )}
-          
-          {customSections.map(section => (
-            <MangaGrid
-              key={section.id}
-              title={section.name}
-              mangaList={section.mangaList}
-              // viewAllHref={`/sections/${section.slug}`} // Can be enabled if section-specific pages are created
-              hasMore={section.hasMoreManga}
-            />
-          ))}
-          
-          {!hasAnyContent && ( 
-            <div className="text-center py-10 text-neutral-extralight">
-              <p className="text-xl mb-2">Content is being prepared!</p>
-              <p>Check back soon for exciting manga series. Admins can add content through the dashboard.</p>
-            </div>
-          )}
-
+            {/* Content sections previously here are now removed */}
+            {!heroItem && ( 
+                <div className="text-center py-10 text-neutral-extralight">
+                <p className="text-xl mb-2">Homepage content is being prepared!</p>
+                <p>Check back soon or add a hero item in the admin panel.</p>
+                </div>
+            )}
         </div>
       </main>
       <Footer />
     </div>
   );
 }
-

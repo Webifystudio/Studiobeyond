@@ -6,16 +6,18 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { LayoutDashboard, BookOpen, Image as ImageIcon, LogOut, Home, FileText, Settings, Menu as MenuIcon, Tag, Link2 as Link2Icon, ListChecks, LayoutGrid as SectionsIcon } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Image as ImageIcon, LogOut, Home, FileText, Settings, Menu as MenuIcon, Tag, ListChecks, LayoutGrid as SectionsIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/dashboard/sections', label: 'Manage Sections', icon: SectionsIcon },
-  { href: '/admin/dashboard/categories', label: 'Manage Categories', icon: ListChecks },
+  // { href: '/admin/dashboard/sections', label: 'Manage Sections', icon: SectionsIcon }, // Removed
+  // { href: '/admin/dashboard/categories', label: 'Manage Categories', icon: ListChecks }, // Removed
   { href: '/admin/dashboard/mangas', label: 'Manage Mangas', icon: BookOpen },
-  { href: '/admin/dashboard/assign-manga-category', label: 'Assign Manga to Category', icon: Tag },
+  // { href: '/admin/dashboard/assign-manga-category', label: 'Assign Manga to Category', icon: Tag }, // Removed
+  // { href: '/admin/dashboard/assign-manga-genre', label: 'Assign Manga to Genre', icon: Tag }, // Removed (assuming Tag was for genre too)
+  { href: '/admin/dashboard/genres', label: 'Manage Genres', icon: Tag }, // Kept Manage Genres
   { href: '/admin/dashboard/slider', label: 'Manage Slider', icon: ImageIcon },
   { href: '/admin/dashboard/pages', label: 'Manage Pages', icon: FileText },
 ];
@@ -164,6 +166,9 @@ export default function AdminDashboardLayout({
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="bg-neutral-medium border-r-neutral-light p-0 flex flex-col w-64 text-neutral-extralight">
+            <SheetHeader className="p-4 border-b border-neutral-light">
+                <SheetTitle className="sr-only">Admin Menu</SheetTitle>
+            </SheetHeader>
              {sidebarContent(true)}
           </SheetContent>
         </Sheet>
@@ -175,4 +180,3 @@ export default function AdminDashboardLayout({
     </div>
   );
 }
-    
