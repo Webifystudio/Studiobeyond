@@ -24,6 +24,7 @@ const navItemsBase = [
   { href: '/', label: 'Home' },
   { href: '/browse', label: 'Browse' },
   { href: '/popular', label: 'Popular' },
+  { href: '/news', label: 'News' },
 ];
 
 interface HeaderProps {

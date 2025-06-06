@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { LayoutDashboard, BookOpen, Image as ImageIcon, LogOut, Home, FileText, Settings, Menu as MenuIcon, Tag, ListChecks, LayoutGrid as SectionsIcon } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Image as ImageIcon, LogOut, Home, FileText, Settings, Menu as MenuIcon, Tag, ListChecks, LayoutGrid as SectionsIcon, Newspaper } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 
@@ -15,6 +15,7 @@ const navItems = [
   { href: '/admin/dashboard/categories', label: 'Manage Categories', icon: ListChecks },
   { href: '/admin/dashboard/mangas', label: 'Manage Mangas', icon: BookOpen },
   { href: '/admin/dashboard/genres', label: 'Manage Genres', icon: Tag },
+  { href: '/admin/dashboard/news', label: 'Manage News', icon: Newspaper },
   { href: '/admin/dashboard/slider', label: 'Manage Slider', icon: ImageIcon },
   { href: '/admin/dashboard/pages', label: 'Manage Pages', icon: FileText },
 ];
