@@ -3,33 +3,24 @@ import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Construction } from 'lucide-react';
 import Link from 'next/link';
 
-export default function GenrePageLoading() {
+export default function GenrePageLoading_REMOVED() {
   return (
     <div className="flex flex-col min-h-screen bg-neutral-dark">
       <Header />
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
         <Button variant="outline" asChild className="mb-6">
-          <Link href="/genres">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Genres
+          <Link href="/">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
           </Link>
         </Button>
         
-        <Skeleton className="h-8 w-1/3 mb-6" /> {/* Page Title Skeleton */}
-        
-        {/* Manga Grid Skeleton */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
-          {[...Array(12)].map((_, i) => ( // Show 12 skeletons
-            <div key={i} className="bg-neutral-medium rounded-xl overflow-hidden shadow-lg">
-              <Skeleton className="aspect-[2/3] w-full" />
-              <div className="p-3 sm:p-4">
-                <Skeleton className="h-5 w-3/4 mb-1" />
-                <Skeleton className="h-4 w-1/2" />
-              </div>
-            </div>
-          ))}
+        <div className="text-center py-10">
+            <Construction className="mx-auto h-16 w-16 text-neutral-extralight/50 mb-4" />
+            <h1 className="text-3xl font-bold text-white mb-4 font-headline">Page Loading...</h1>
+            <p className="text-neutral-extralight">(Note: Genre feature has been removed)</p>
         </div>
       </main>
       <Footer />

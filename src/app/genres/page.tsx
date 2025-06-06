@@ -3,42 +3,9 @@ import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
-import { GenreGrid, type GenreItem } from '@/components/manga/genre-grid';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query, orderBy, Timestamp } from 'firebase/firestore';
+import { ArrowLeft, Construction } from 'lucide-react';
 
-interface GenreDoc {
-  id: string;
-  name: string;
-  slug: string; // Expecting slug to be present
-  createdAt: Timestamp;
-}
-
-async function getAllGenres(): Promise<GenreItem[]> {
-  try {
-    const genresQuery = query(collection(db, 'genres'), orderBy('name', 'asc'));
-    const genresSnapshot = await getDocs(genresQuery);
-    return genresSnapshot.docs
-      .map(doc => {
-        const data = doc.data() as Omit<GenreDoc, 'id'>;
-        // Ensure slug exists, otherwise fallback to generating one from name for the link
-        const slug = data.slug || data.name.toLowerCase().replace(/\s+/g, '-');
-        return {
-          id: doc.id,
-          name: data.name,
-          href: `/genre/${encodeURIComponent(slug)}`,
-        };
-      });
-  } catch (error) {
-    console.error("Error fetching all genres: ", error);
-    return [];
-  }
-}
-
-export default async function GenresPage() {
-  const genres = await getAllGenres();
-
+export default async function GenresPage_REMOVED() {
   return (
     <div className="flex flex-col min-h-screen bg-neutral-dark">
       <Header />
@@ -48,14 +15,11 @@ export default async function GenresPage() {
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
           </Link>
         </Button>
-        {genres.length > 0 ? (
-          <GenreGrid title="All Genres" genres={genres} />
-        ) : (
-            <div className="text-center">
-                <h1 className="text-3xl font-bold text-white mb-4 font-headline">All Genres</h1>
-                <p className="text-neutral-extralight">No genres found. Add genres through the admin panel.</p>
-            </div>
-        )}
+        <div className="text-center py-10">
+            <Construction className="mx-auto h-16 w-16 text-neutral-extralight/50 mb-4" />
+            <h1 className="text-3xl font-bold text-white mb-4 font-headline">Genres Feature Removed</h1>
+            <p className="text-neutral-extralight">The genres feature is currently not available.</p>
+        </div>
       </main>
       <Footer />
     </div>

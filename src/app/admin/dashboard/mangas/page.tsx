@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, List, Trash2, ExternalLink, UploadCloud } from 'lucide-react';
+import { PlusCircle, List, Trash2, ExternalLink, UploadCloud, Copy } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { db, serverTimestamp, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, Timestamp } from '@/lib/firebase';
 import Image from 'next/image';
@@ -23,7 +23,6 @@ interface Manga {
   categoryNames?: string[];
   dataAiHint?: string;
   externalReadLink?: string;
-  genres?: string[];
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -43,7 +42,6 @@ const initialMangaDetails = {
   dataAiHint: '',
   externalReadLink: '',
   selectedCategoryNames: [] as string[],
-  // selectedSectionId: '', // Removed sectionId
 };
 
 const IMGBB_API_KEY = "2bb2346a6a907388d8a3b0beac2bca86";
@@ -166,14 +164,13 @@ export default function ManageMangasPage() {
 
     setIsSubmittingManga(true);
     try {
-      const dataToSave: Partial<Omit<Manga, 'id' | 'createdAt' | 'updatedAt' | 'genres'>> & { createdAt: any, updatedAt: any, genres?: string[], categoryNames?: string[] } = {
+      const dataToSave: Partial<Omit<Manga, 'id' | 'createdAt' | 'updatedAt'>> & { createdAt: any, updatedAt: any, categoryNames?: string[] } = {
         title: mangaDetails.title.trim(),
         description: mangaDetails.description.trim(),
         chapters: parseInt(mangaDetails.chapters) || 0,
         status: mangaDetails.status,
         imageUrl: mangaDetails.imageUrl.trim(),
-        categoryNames: mangaDetails.selectedCategoryNames, // Save selected category names
-        genres: [], // Initialize genres if not handled elsewhere
+        categoryNames: mangaDetails.selectedCategoryNames,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -213,6 +210,25 @@ export default function ManageMangasPage() {
         console.error("Error deleting manga: ", error);
         toast({ title: "Error Deleting Manga", description: error.message || "Could not delete manga.", variant: "destructive" });
     }
+  };
+
+  const handleImportMangaDetails = (mangaToImport: Manga) => {
+    setMangaDetails({
+      title: mangaToImport.title,
+      description: mangaToImport.description,
+      chapters: mangaToImport.chapters.toString(), // Input expects string
+      status: mangaToImport.status,
+      imageUrl: mangaToImport.imageUrl,
+      categoryNames: mangaToImport.categoryNames ? [...mangaToImport.categoryNames] : [],
+      selectedCategoryNames: mangaToImport.categoryNames ? [...mangaToImport.categoryNames] : [],
+      dataAiHint: mangaToImport.dataAiHint || '',
+      externalReadLink: mangaToImport.externalReadLink || '',
+    });
+    setSelectedCoverFile(null);
+    const fileInput = document.getElementById('coverImageFile') as HTMLInputElement | null;
+    if (fileInput) fileInput.value = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    toast({ title: "Manga Details Imported", description: `Details from "${mangaToImport.title}" loaded into the form.` });
   };
 
   return (
@@ -376,23 +392,31 @@ export default function ManageMangasPage() {
                     {manga.categoryNames && manga.categoryNames.length > 0 && (
                        <p className="text-xs text-neutral-extralight/70 truncate" title={manga.categoryNames.join(', ')}>Categories: {manga.categoryNames.join(', ')}</p>
                     )}
-                    {manga.genres && manga.genres.length > 0 && (
-                       <p className="text-xs text-neutral-extralight/70 truncate" title={manga.genres.join(', ')}>Genres: {manga.genres.join(', ')}</p>
-                    )}
                     {manga.externalReadLink && (
                       <a href={manga.externalReadLink} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-primary hover:underline flex items-center mt-1">
                          <ExternalLink className="h-3 w-3 mr-1" /> Read Externally
                       </a>
                     )}
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-400 hover:text-red-300 hover:bg-neutral-medium/50 p-1 mt-2 h-auto w-auto self-end"
-                        onClick={() => handleDeleteManga(manga.id, manga.title)}
-                        aria-label={`Delete ${manga.title}`}
-                    >
-                        <Trash2 className="h-4 w-4 mr-1" /> Delete
-                    </Button>
+                    <div className="flex items-center justify-start space-x-2 mt-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs hover:bg-neutral-medium/50 p-1 h-auto"
+                            onClick={() => handleImportMangaDetails(manga)}
+                            aria-label={`Import details from ${manga.title}`}
+                        >
+                            <Copy className="h-3 w-3 mr-1" /> Import
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-400 hover:text-red-300 hover:bg-neutral-medium/50 p-1 h-auto"
+                            onClick={() => handleDeleteManga(manga.id, manga.title)}
+                            aria-label={`Delete ${manga.title}`}
+                        >
+                            <Trash2 className="h-4 w-4 mr-1" /> Delete
+                        </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -403,6 +427,4 @@ export default function ManageMangasPage() {
     </div>
   );
 }
-    
-
     

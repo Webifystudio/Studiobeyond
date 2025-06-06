@@ -33,7 +33,7 @@ interface MangaDoc {
   status: string;
   reviews?: string[]; 
   externalReadLink?: string; 
-  genres?: string[]; // Kept for related manga logic, even if not displayed directly
+  categoryNames?: string[]; 
   createdAt: Timestamp;
   updatedAt: Timestamp;
   views?: number; 
@@ -75,14 +75,14 @@ export default function MangaDetailPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
-      if (user && mangaId) { // Check for mangaId as well before fetching like status
+      if (user && mangaId) { 
         checkIfUserLiked(user.uid, mangaId);
       } else {
-        setHasLiked(false); // Reset if user logs out or mangaId changes
+        setHasLiked(false); 
       }
     });
     return () => unsubscribe();
-  }, [mangaId]); // Add mangaId dependency
+  }, [mangaId]); 
   
   const checkIfUserLiked = async (userId: string, currentMangaId: string) => {
     const likeRef = doc(db, 'mangas', currentMangaId, 'likes', userId);
@@ -109,11 +109,12 @@ export default function MangaDetailPage() {
             checkIfUserLiked(currentUser.uid, mangaId);
           }
 
-          if (mangaData.genres && mangaData.genres.length > 0) {
-             const primaryGenre = mangaData.genres[0];
+          // Fetch related manga based on categories, then fallback
+          if (mangaData.categoryNames && mangaData.categoryNames.length > 0) {
+             const primaryCategory = mangaData.categoryNames[0];
              const qRelated = query(
                 collection(db, "mangas"),
-                where("genres", "array-contains", primaryGenre),
+                where("categoryNames", "array-contains", primaryCategory),
                 where("__name__", "!=", mangaId), 
                 orderBy("__name__"), 
                 limit(6)
@@ -131,6 +132,7 @@ export default function MangaDetailPage() {
             });
             setRelatedManga(relatedList);
           } else {
+            // Fallback if no categories: fetch latest updated manga excluding current one
             const qFallback = query(collection(db, "mangas"), where("__name__", "!=", mangaId), orderBy("updatedAt", "desc"), limit(6));
             const fallbackSnapshot = await getDocs(qFallback);
             const fallbackList = fallbackSnapshot.docs.map(docSnap => {
@@ -175,7 +177,7 @@ export default function MangaDetailPage() {
 
     fetchMangaData();
     fetchComments();
-  }, [mangaId, currentUser]); // Re-fetch manga data if currentUser changes (to update like status early)
+  }, [mangaId, currentUser]); 
 
 
   const fetchComments = async () => {
@@ -210,7 +212,7 @@ export default function MangaDetailPage() {
         await deleteDoc(likeRef);
         await updateDoc(mangaRef, { likes: increment(-1) });
         setHasLiked(false);
-        setLikeCount(prev => Math.max(0, prev - 1)); // Ensure count doesn't go below 0
+        setLikeCount(prev => Math.max(0, prev - 1)); 
         toast({ title: "Unliked!" });
       } else {
         await setDoc(likeRef, { userId: currentUser.uid, createdAt: serverTimestamp() });
@@ -241,7 +243,7 @@ export default function MangaDetailPage() {
       const userDocSnap = await getDoc(userDocRef);
       const username = userDocSnap.exists() ? userDocSnap.data()?.username : currentUser.displayName || "Anonymous";
       
-      const commentData: Omit<CommentDoc, 'id' | 'createdAt'> & { createdAt: any } = { // Type createdAt as any for serverTimestamp
+      const commentData: Omit<CommentDoc, 'id' | 'createdAt'> & { createdAt: any } = { 
         userId: currentUser.uid,
         username: username,
         userPhotoURL: currentUser.photoURL,
@@ -514,4 +516,3 @@ export default function MangaDetailPage() {
     </div>
   );
 }
-
