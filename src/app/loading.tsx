@@ -1,99 +1,58 @@
 
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingTips } from '@/components/layout/loading-tips';
+
+const tips = [
+  "Tip: You can change the application's theme in your Profile Settings!",
+  "Tip: Many pages support horizontal and vertical reading modes for chapters.",
+  "Tip: Explore different genres to find your next favorite manga!",
+  "Tip: Use the search bar in the header to quickly find specific manga titles.",
+  "Tip: Check out the 'Popular' section for trending manga.",
+  "Tip: Visit the Admin Panel to add new manga, chapters, and slider items.",
+  "Tip: AI Summaries can give you a quick idea of a manga's pros and cons before diving in.",
+  "Tip: Look for download links on chapter pages for Telegram or Discord!"
+];
 
 export default function Loading() {
   return (
-    <div className="flex flex-col min-h-screen bg-neutral-dark">
-      {/* Header Skeleton */}
-      <header className="bg-neutral-medium shadow-lg sticky top-0 z-50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
-            <Skeleton className="h-8 w-48" /> {/* Logo Placeholder */}
-            <div className="hidden md:flex space-x-6 items-center">
-              <Skeleton className="h-5 w-20" />
-              <Skeleton className="h-5 w-20" />
-              <Skeleton className="h-5 w-20" />
-              <Skeleton className="h-5 w-24" />
-              <Skeleton className="h-5 w-20" />
-            </div>
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <Skeleton className="h-10 w-40 rounded-full hidden sm:block" /> {/* Search Placeholder */}
-              <Skeleton className="h-10 w-10 rounded-full" /> {/* User Icon Placeholder */}
-              <div className="md:hidden">
-                <Skeleton className="h-10 w-10 rounded-full" /> {/* Menu Icon Placeholder */}
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content Skeleton */}
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
-        {/* Hero Section Skeleton */}
-        <section className="relative overflow-hidden mb-12 min-h-[60vh] sm:min-h-[70vh] lg:min-h-[500px] flex items-end p-6 sm:p-10 bg-neutral-medium rounded-xl">
-          <div className="relative z-10 w-full">
-            <Skeleton className="h-12 w-3/4 mb-3" />
-            <Skeleton className="h-6 w-1/2 mb-6" />
-            <Skeleton className="h-12 w-32 rounded-lg" />
-          </div>
-        </section>
-
-        {/* Manga Grid Skeleton */}
-        <section className="mb-12">
-          <Skeleton className="h-8 w-1/3 mb-6" /> {/* Section Title Skeleton */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-neutral-medium rounded-xl overflow-hidden shadow-lg">
-                <Skeleton className="aspect-[2/3] w-full" />
-                <div className="p-3 sm:p-4">
-                  <Skeleton className="h-5 w-3/4 mb-1" />
-                  <Skeleton className="h-4 w-1/2" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Genre Grid Skeleton */}
-        <section className="mb-12">
-          <Skeleton className="h-8 w-1/4 mb-6" /> {/* Section Title Skeleton */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-             {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-20 w-full rounded-xl bg-neutral-medium" />
-             ))}
-          </div>
-        </section>
-      </main>
-
-      {/* Footer Skeleton */}
-      <footer className="bg-neutral-medium border-t border-neutral-light mt-12">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <Skeleton className="h-6 w-32 mb-4" />
-              <Skeleton className="h-4 w-full mb-1" />
-              <Skeleton className="h-4 w-3/4" />
-            </div>
-            <div>
-              <Skeleton className="h-5 w-24 mb-4" />
-              <Skeleton className="h-4 w-20 mb-2" />
-              <Skeleton className="h-4 w-20 mb-2" />
-              <Skeleton className="h-4 w-20 mb-2" />
-            </div>
-            <div>
-              <Skeleton className="h-5 w-32 mb-4" />
-              <div className="flex space-x-4">
-                <Skeleton className="h-6 w-6 rounded-full" />
-                <Skeleton className="h-6 w-6 rounded-full" />
-                <Skeleton className="h-6 w-6 rounded-full" />
-              </div>
-            </div>
-          </div>
-          <div className="mt-8 border-t border-neutral-light pt-8 text-center">
-            <Skeleton className="h-4 w-1/2 mx-auto" />
-          </div>
-        </div>
-      </footer>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-neutral-dark text-neutral-extralight p-6 overflow-hidden">
+      <div className="relative w-32 h-32 sm:w-36 sm:h-36 mb-8">
+        {/* Animated SVG Logo */}
+        <svg 
+          viewBox="0 0 120 120" 
+          xmlns="http://www.w3.org/2000/svg" 
+          className="w-full h-full animate-pulseSlowLogo"
+        >
+          {/* Outer spinning arcs */}
+          <circle cx="60" cy="60" r="50" fill="none" stroke="hsl(var(--primary))" strokeWidth="4" strokeDasharray="15 15" className="animate-spinLogo" style={{transformOrigin: 'center'}} />
+          <circle cx="60" cy="60" r="40" fill="none" stroke="hsl(var(--accent))" strokeWidth="3" strokeDasharray="10 10" className="animate-spinLogoReverse" style={{transformOrigin: 'center', animationDelay: '0.2s'}} />
+          
+          {/* Central Static Text "BS" - Fade In */}
+          <text 
+            x="50%" 
+            y="50%" 
+            dy=".3em" 
+            textAnchor="middle" 
+            fontSize="40" 
+            fontWeight="bold" 
+            fill="hsl(var(--foreground))"
+            className="opacity-0 animate-fadeIn"
+            style={{ animationDelay: '0.5s', animationFillMode: 'forwards' }}
+          >
+            BS
+          </text>
+        </svg>
+      </div>
+      
+      <h1 className="text-2xl sm:text-3xl font-bold text-brand-primary mb-3 font-headline opacity-0 animate-fadeIn" style={{ animationDelay: '0.8s', animationFillMode: 'forwards' }}>
+        BEYOND SCANS
+      </h1>
+      <p className="text-base sm:text-lg text-neutral-extralight/90 mb-10 opacity-0 animate-fadeIn" style={{ animationDelay: '1.1s', animationFillMode: 'forwards' }}>
+        Loading your next adventure...
+      </p>
+      
+      <div className="w-full max-w-md opacity-0 animate-fadeIn" style={{ animationDelay: '1.4s', animationFillMode: 'forwards' }}>
+        <LoadingTips tips={tips} interval={4000} />
+      </div>
     </div>
   );
 }

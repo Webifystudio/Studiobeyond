@@ -89,14 +89,32 @@ export default {
             height: '0',
           },
         },
+        fadeIn: {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0px)' },
+        },
+        pulseSlowLogo: { // Renamed for clarity
+          '0%, 100%': { transform: 'scale(1)', opacity: '0.9' },
+          '50%': { transform: 'scale(1.05)', opacity: '1' },
+        },
+        spinLogo: { // Renamed
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
+        spinLogoReverse: { // Renamed
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(-360deg)' },
+        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        fadeIn: 'fadeIn 0.7s ease-out', // General fade-in, can add 'forwards' if needed in specific uses
+        pulseSlowLogo: 'pulseSlowLogo 3s infinite ease-in-out',
+        spinLogo: 'spinLogo 10s linear infinite',
+        spinLogoReverse: 'spinLogoReverse 12s linear infinite',
       },
     },
   },
   plugins: [require('tailwindcss-animate')],
 } satisfies Config;
-
-    
