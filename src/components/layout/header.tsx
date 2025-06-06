@@ -6,7 +6,7 @@ import { useState, useEffect, type KeyboardEvent } from 'react';
 import { Search, Menu as MenuIcon, X, LogIn, LogOut, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { usePathname, useRouter } from 'next/navigation';
 import { auth, signOut, onAuthStateChanged, type User as FirebaseUser } from '@/lib/firebase';
@@ -230,7 +230,10 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
                     }
                 }}
               >
-                <div className="p-4 pt-6">
+                <SheetHeader className="p-4 border-b border-neutral-light sr-only">
+                  <SheetTitle>Main Navigation Menu</SheetTitle>
+                </SheetHeader>
+                <div className="p-4 pt-2">
                    <div className="flex justify-between items-center mb-6 px-2">
                         <Link href="/" className="text-2xl font-bold text-brand-primary font-inter whitespace-nowrap" onClick={() => setIsMobileMenuOpen(false)}>
                             BEYOND SCANS
@@ -280,3 +283,4 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
     </header>
   );
 }
+
