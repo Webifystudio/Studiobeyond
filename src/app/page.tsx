@@ -29,7 +29,7 @@ interface MangaDoc {
   imageUrl: string;
   dataAiHint?: string;
   genres?: string[]; 
-  sectionId?: string; // For custom sections
+  sectionId?: string; 
   createdAt: Timestamp;
   updatedAt: Timestamp;
   views?: number;
@@ -93,12 +93,15 @@ async function getHomePageData() {
     hasMoreTrending = allTrending.length > ITEMS_PER_MANGA_SECTION_PREVIEW;
 
     // Fetch New Release Manga
-    const newReleaseQuery = query(collection(db, 'mangas'), orderBy('updatedAt', 'desc'), limit(FETCH_LIMIT_FOR_MANGA_HAS_MORE));
-    let newReleaseSnapshot = await getDocs(newReleaseQuery);
-     if (newReleaseSnapshot.docs.length < FETCH_LIMIT_FOR_MANGA_HAS_MORE) { 
-        const fallbackRecentQuery = query(collection(db, 'mangas'), orderBy('createdAt', 'desc'), limit(FETCH_LIMIT_FOR_MANGA_HAS_MORE));
-        const fallbackSnapshot = await getDocs(fallbackRecentQuery);
-        if (fallbackSnapshot.docs.length > newReleaseSnapshot.docs.length) {
+    const mangaCollectionRef = collection(db, 'mangas');
+    let newReleaseSnapshot = await getDocs(query(mangaCollectionRef, orderBy('updatedAt', 'desc'), limit(FETCH_LIMIT_FOR_MANGA_HAS_MORE)));
+
+    // If updatedAt yields fewer than the desired number of items for preview, or is empty, try createdAt
+    if (newReleaseSnapshot.docs.length < ITEMS_PER_MANGA_SECTION_PREVIEW) {
+        const fallbackSnapshot = await getDocs(query(mangaCollectionRef, orderBy('createdAt', 'desc'), limit(FETCH_LIMIT_FOR_MANGA_HAS_MORE)));
+        // Use fallback if it has more items than the updatedAt query and updatedAt query was insufficient,
+        // OR if updatedAt query was empty and fallback has items.
+        if (fallbackSnapshot.docs.length > newReleaseSnapshot.docs.length || (newReleaseSnapshot.empty && !fallbackSnapshot.empty) ) {
             newReleaseSnapshot = fallbackSnapshot;
         }
     }
@@ -116,7 +119,7 @@ async function getHomePageData() {
     hasMoreNewReleases = allNewReleases.length > ITEMS_PER_MANGA_SECTION_PREVIEW;
 
     // Fetch Custom Sections and their Manga
-    const sectionsQuery = query(collection(db, 'sections'), orderBy('createdAt', 'asc')); // Order by name or a custom order field later
+    const sectionsQuery = query(collection(db, 'sections'), orderBy('createdAt', 'asc'));
     const sectionsSnapshot = await getDocs(sectionsQuery);
     
     for (const sectionDoc of sectionsSnapshot.docs) {
@@ -124,7 +127,7 @@ async function getHomePageData() {
         const mangasForSectionQuery = query(
             collection(db, 'mangas'),
             where('sectionId', '==', sectionDoc.id),
-            orderBy('updatedAt', 'desc'), // Or by title, or a custom order within section
+            orderBy('updatedAt', 'desc'), 
             limit(FETCH_LIMIT_FOR_MANGA_HAS_MORE)
         );
         const mangasSnapshot = await getDocs(mangasForSectionQuery);
@@ -139,7 +142,7 @@ async function getHomePageData() {
             };
         });
         
-        if (allMangaForSection.length > 0) {
+        if (allMangaForSection.length > 0) { // Only add section if it has manga
              customSections.push({
                 id: sectionDoc.id,
                 name: sectionData.name,
@@ -153,7 +156,6 @@ async function getHomePageData() {
 
   } catch (error) {
     console.error("Error fetching homepage data: ", error);
-    // Reset all data on error
     heroItem = null;
     trendingManga = [];
     newReleaseManga = [];
@@ -188,9 +190,9 @@ export default async function HomePage() {
           />
         ) : (
            <HeroSection
-            title="Featured Manga"
-            description="Discover amazing manga series. Content managed via Admin Panel."
-            imageUrl="https://placehold.co/1600x700.png"
+            title="Welcome to BEYOND SCANS"
+            description="Discover amazing manga series. Explore our curated collections and latest updates. Content is managed via the Admin Panel."
+            imageUrl="https://placehold.co/1600x700/1D232A/FF6B6B.png?text=BEYOND+SCANS"
             imageAlt="Featured Manga Placeholder"
             buttonText="Explore Now"
             buttonHref="/browse" 
@@ -221,22 +223,19 @@ export default async function HomePage() {
           )}
           
           {customSections.map(section => (
-            section.mangaList.length > 0 && ( // Only render if the section has manga
-              <MangaGrid
-                key={section.id}
-                title={section.name}
-                mangaList={section.mangaList}
-                // viewAllHref={`/sections/${section.slug}`} // Optional: if you build section-specific pages
-                hasMore={section.hasMoreManga}
-              />
-            )
+            <MangaGrid
+              key={section.id}
+              title={section.name}
+              mangaList={section.mangaList}
+              // viewAllHref={`/sections/${section.slug}`} // Enable if you create section-specific pages
+              hasMore={section.hasMoreManga}
+            />
           ))}
           
           {!hasAnyContent && ( 
             <div className="text-center py-10 text-neutral-extralight">
-              <p className="text-xl mb-2">Welcome to BEYOND SCANS!</p>
-              <p>Content is being prepared. Check back soon for exciting manga series.</p>
-              <p className="mt-4 text-sm">Admins can add content through the dashboard.</p>
+              <p className="text-xl mb-2">Content is being prepared!</p>
+              <p>Check back soon for exciting manga series. Admins can add content through the dashboard.</p>
             </div>
           )}
 
