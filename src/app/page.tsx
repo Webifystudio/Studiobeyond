@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, orderBy, limit, where, type Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, where, type Timestamp } from '@/lib/firebase';
 
 export const dynamic = 'force-dynamic'; 
 
@@ -31,8 +31,8 @@ interface MangaDoc {
   dataAiHint?: string;
   categoryNames?: string[];
   updatedAt: Timestamp;
-  createdAt: Timestamp; // Added for fallback sorting
-  views?: number; // For trending
+  createdAt: Timestamp;
+  views?: number;
 }
 
 interface CategoryDoc {
@@ -71,13 +71,14 @@ async function getHomePageData() {
     }
   } catch (error) {
     console.error("Error fetching hero item:", error);
-    // heroItem remains null, a default will be shown by the HeroSection component
   }
 
   // Fetch Categories and their Manga
   try {
     const categoriesCollectionQuery = query(collection(db, 'categories'), orderBy('name', 'asc'));
     const allCategoriesSnapshot = await getDocs(categoriesCollectionQuery);
+
+    let isFirstCategory = true; // Flag for diagnostic query change
 
     for (const categoryDoc of allCategoriesSnapshot.docs) {
       const categoryData = categoryDoc.data() as Omit<CategoryDoc, 'id'>;
@@ -94,17 +95,30 @@ async function getHomePageData() {
         continue; 
       }
 
+      console.log(`[DIAGNOSTIC LOG] Processing Category: "${currentCategory.name}" (Slug: ${currentCategory.slug})`);
+
       try {
-        const mangaQuery = query(
-          collection(db, 'mangas'),
-          where('categoryNames', 'array-contains', currentCategory.name),
-          orderBy('updatedAt', 'desc'), 
-          limit(MANGA_PER_CATEGORY_LIMIT)
-        );
+        let mangaQuery;
+        if (isFirstCategory) {
+          // DIAGNOSTIC: Simplify query for the first category
+          console.log(`  [DIAGNOSTIC QUERY FOR FIRST CATEGORY] Firestore Query Sent: mangas WHERE 'categoryNames' array-contains "${currentCategory.name}", LIMIT ${MANGA_PER_CATEGORY_LIMIT}. (OrderBy removed for test)`);
+          mangaQuery = query(
+            collection(db, 'mangas'),
+            where('categoryNames', 'array-contains', currentCategory.name),
+            limit(MANGA_PER_CATEGORY_LIMIT)
+          );
+          isFirstCategory = false; // Only do this for the first category
+        } else {
+          // Normal query for other categories
+          console.log(`  Firestore Query Sent: mangas WHERE 'categoryNames' array-contains "${currentCategory.name}", ORDER BY 'updatedAt' DESC, LIMIT ${MANGA_PER_CATEGORY_LIMIT}.`);
+          mangaQuery = query(
+            collection(db, 'mangas'),
+            where('categoryNames', 'array-contains', currentCategory.name),
+            orderBy('updatedAt', 'desc'), 
+            limit(MANGA_PER_CATEGORY_LIMIT)
+          );
+        }
         
-        // --- DETAILED DIAGNOSTIC LOG ---
-        console.log(`[DIAGNOSTIC LOG] Processing Category: "${currentCategory.name}" (Slug: ${currentCategory.slug})`);
-        console.log(`  Firestore Query Sent: mangas WHERE 'categoryNames' array-contains "${currentCategory.name}", ORDER BY 'updatedAt' DESC, LIMIT ${MANGA_PER_CATEGORY_LIMIT}.`);
         const mangaSnapshot = await getDocs(mangaQuery);
         console.log(`  Manga documents FOUND by Firestore for "${currentCategory.name}": ${mangaSnapshot.docs.length}`);
 
@@ -114,13 +128,17 @@ async function getHomePageData() {
             console.warn(`    2. Does this manga document have a field named 'categoryNames'?`);
             console.warn(`    3. Is 'categoryNames' an ARRAY of STRINGS? (e.g., ["${currentCategory.name}", "Other Category"])`);
             console.warn(`    4. Does that array contain the EXACT string "${currentCategory.name}" (it's case-sensitive)?`);
-            console.warn(`    5. Does the manga have an 'updatedAt' field that is a Firestore Timestamp?`);
-            console.warn(`    6. Most importantly: Check your BROWSER'S DEVELOPER CONSOLE for any Firestore errors, especially "MISSING_INDEX" or "The query requires an index...". If you see such an error, Firestore usually provides a link to create the index. YOU MUST CREATE THIS INDEX.`);
+            if (!isFirstCategory) { // Only remind about updatedAt if it was part of the query
+                 console.warn(`    5. Does the manga have an 'updatedAt' field that is a Firestore Timestamp?`);
+                 console.warn(`    6. Most importantly: Check your BROWSER'S DEVELOPER CONSOLE for any Firestore errors, especially "MISSING_INDEX" or "The query requires an index...". If you see such an error, Firestore usually provides a link to create the index. YOU MUST CREATE THIS INDEX for the query with 'orderBy'.`);
+            } else {
+                 console.warn(`    5. (OrderBy was removed for this first category test. If manga *now* appear, the original query with 'orderBy' likely needs an index.)`);
+                 console.warn(`    6. If manga *still* don't appear even with the simplified query, double-check points 1-4 above. The issue is likely with how data is stored/matched.`);
+            }
         }
-        // --- END DETAILED DIAGNOSTIC LOG ---
         
         currentCategory.mangas = mangaSnapshot.docs.slice(0, 6).map(doc => {
-          const data = doc.data() as MangaDoc; // Use MangaDoc which includes categoryNames
+          const data = doc.data() as MangaDoc;
           return {
             id: doc.id,
             title: data.title,
@@ -176,23 +194,23 @@ export default async function HomePage() {
         )}
         
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Display each category as a section */}
           {categoriesWithManga.map((category) => (
-            category.name && category.slug && ( // Ensure category has name and slug
+            category.name && category.slug && (
               <section key={category.id} className="mb-12">
                 <div className="flex justify-between items-center mb-4 sm:mb-6">
                   <h2 className="text-2xl sm:text-3xl font-bold section-title text-white font-headline">{category.name}</h2>
-                  <Button variant="outline" asChild size="sm" className="text-sm">
-                    <Link href={`/category/${category.slug}`}>
-                      View All <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
+                  {category.slug && (
+                    <Button variant="outline" asChild size="sm" className="text-sm">
+                      <Link href={`/category/${category.slug}`}>
+                        View All <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  )}
                 </div>
                 {category.mangas.length > 0 ? (
                    <MangaGrid 
-                      title="" // Title is handled by the h2 above
+                      title="" 
                       mangaList={category.mangas}
-                      // No viewAllHref or hasMore needed here as MangaGrid doesn't use it if title is empty
                    />
                 ) : (
                   <p className="text-neutral-extralight/70 pl-4">No manga in the "{category.name}" category yet.</p> 
@@ -201,7 +219,6 @@ export default async function HomePage() {
             )
           ))}
 
-          {/* Message if no hero AND no categories were found at all */}
           {!heroItem && categoriesWithManga.length === 0 && ( 
              <div className="text-center py-10 text-neutral-extralight">
                 <p className="text-xl mb-2">Homepage content is being prepared!</p>
@@ -214,3 +231,5 @@ export default async function HomePage() {
     </div>
   );
 }
+
+    
