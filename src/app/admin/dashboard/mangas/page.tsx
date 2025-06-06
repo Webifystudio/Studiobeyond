@@ -20,10 +20,10 @@ interface Manga {
   chapters: number;
   status: string;
   imageUrl: string;
-  categoryNames?: string[]; 
+  categoryNames?: string[];
   dataAiHint?: string;
   externalReadLink?: string;
-  genres?: string[]; 
+  genres?: string[];
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -43,20 +43,21 @@ const initialMangaDetails = {
   dataAiHint: '',
   externalReadLink: '',
   selectedCategoryNames: [] as string[],
+  // selectedSectionId: '', // Removed sectionId
 };
 
-const IMGBB_API_KEY = "2bb2346a6a907388d8a3b0beac2bca86"; 
+const IMGBB_API_KEY = "2bb2346a6a907388d8a3b0beac2bca86";
 
 export default function ManageMangasPage() {
   const [mangaDetails, setMangaDetails] = useState(initialMangaDetails);
   const [mangas, setMangas] = useState<Manga[]>([]);
   const [allCategories, setAllCategories] = useState<CategoryDoc[]>([]);
-  const [isLoading, setIsLoading] = useState(true); 
-  const [isSubmittingManga, setIsSubmittingManga] = useState(false); 
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmittingManga, setIsSubmittingManga] = useState(false);
   const [selectedCoverFile, setSelectedCoverFile] = useState<File | null>(null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-  
+
   const { toast } = useToast();
 
   const fetchMangas = async () => {
@@ -106,7 +107,7 @@ export default function ManageMangasPage() {
     const { name, value } = e.target;
     setMangaDetails(prev => ({ ...prev, [name]: value }));
   };
-  
+
   const handleCategoryChange = (categoryName: string) => {
     setMangaDetails(prev => {
       const newSelectedCategories = prev.selectedCategoryNames.includes(categoryName)
@@ -143,7 +144,7 @@ export default function ManageMangasPage() {
       if (result.success) {
         setMangaDetails(prev => ({ ...prev, imageUrl: result.data.display_url }));
         toast({ title: "Cover Image Uploaded", description: "Image successfully uploaded. URL populated." });
-        setSelectedCoverFile(null); 
+        setSelectedCoverFile(null);
         const fileInput = document.getElementById('coverImageFile') as HTMLInputElement | null;
         if (fileInput) fileInput.value = '';
       } else {
@@ -162,17 +163,17 @@ export default function ManageMangasPage() {
        toast({ title: "Validation Error", description: "Title and Cover Image URL are required.", variant: "destructive" });
       return;
     }
-    
+
     setIsSubmittingManga(true);
     try {
-      const dataToSave: Partial<Omit<Manga, 'id' | 'createdAt' | 'updatedAt' | 'genres'>> & { createdAt: any, updatedAt: any, genres?: string[], categoryNames?: string[] } = { 
+      const dataToSave: Partial<Omit<Manga, 'id' | 'createdAt' | 'updatedAt' | 'genres'>> & { createdAt: any, updatedAt: any, genres?: string[], categoryNames?: string[] } = {
         title: mangaDetails.title.trim(),
         description: mangaDetails.description.trim(),
         chapters: parseInt(mangaDetails.chapters) || 0,
         status: mangaDetails.status,
         imageUrl: mangaDetails.imageUrl.trim(),
-        categoryNames: mangaDetails.selectedCategoryNames,
-        genres: [], 
+        categoryNames: mangaDetails.selectedCategoryNames, // Save selected category names
+        genres: [], // Initialize genres if not handled elsewhere
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -183,15 +184,15 @@ export default function ManageMangasPage() {
       if (mangaDetails.externalReadLink.trim()) {
         dataToSave.externalReadLink = mangaDetails.externalReadLink.trim();
       }
-      
+
       await addDoc(collection(db, 'mangas'), dataToSave);
 
       toast({ title: "Manga Added", description: `Manga "${mangaDetails.title}" added successfully.` });
-      setMangaDetails(initialMangaDetails); 
+      setMangaDetails(initialMangaDetails);
       const fileInput = document.getElementById('coverImageFile') as HTMLInputElement | null;
       if (fileInput) fileInput.value = '';
       setSelectedCoverFile(null);
-      fetchMangas(); 
+      fetchMangas();
     } catch (error: any) {
       console.error("Error adding manga: ", error);
       toast({ title: "Error Adding Manga", description: error.message || "Could not add manga.", variant: "destructive" });
@@ -199,7 +200,7 @@ export default function ManageMangasPage() {
       setIsSubmittingManga(false);
     }
   };
-  
+
   const handleDeleteManga = async (mangaId: string, title: string) => {
     if (!confirm(`Are you sure you want to delete manga "${title}"? This action cannot be undone.`)) {
         return;
@@ -207,7 +208,7 @@ export default function ManageMangasPage() {
     try {
         await deleteDoc(doc(db, "mangas", mangaId));
         toast({ title: "Manga Deleted", description: `Manga "${title}" deleted successfully.` });
-        fetchMangas(); 
+        fetchMangas();
     } catch (error: any) {
         console.error("Error deleting manga: ", error);
         toast({ title: "Error Deleting Manga", description: error.message || "Could not delete manga.", variant: "destructive" });
@@ -217,7 +218,7 @@ export default function ManageMangasPage() {
   return (
     <div className="space-y-6 md:space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold text-white font-headline">Manage Mangas</h1>
-      
+
       <Card className="bg-neutral-medium border-neutral-light">
         <CardHeader>
           <CardTitle className="text-lg md:text-xl text-white font-headline flex items-center">
@@ -244,10 +245,10 @@ export default function ManageMangasPage() {
               </div>
               <div>
                 <Label htmlFor="status" className="text-neutral-extralight">Status</Label>
-                <select 
-                    id="status" 
-                    name="status" 
-                    value={mangaDetails.status} 
+                <select
+                    id="status"
+                    name="status"
+                    value={mangaDetails.status}
                     onChange={handleChange}
                     className="w-full h-10 rounded-md border border-input bg-neutral-light px-3 py-2 text-sm md:text-base text-neutral-extralight focus:ring-brand-primary"
                 >
@@ -257,7 +258,7 @@ export default function ManageMangasPage() {
                 </select>
               </div>
             </div>
-            
+
             <div>
               <Label className="text-neutral-extralight mb-2 block">Categories (Optional)</Label>
               {isLoadingCategories ? (
@@ -285,24 +286,24 @@ export default function ManageMangasPage() {
 
             <div>
               <Label htmlFor="imageUrl" className="text-neutral-extralight">Cover Image URL</Label>
-              <Input 
-                id="imageUrl" 
-                name="imageUrl" 
-                type="url" 
-                value={mangaDetails.imageUrl} 
-                onChange={handleChange} 
-                placeholder="https://example.com/image.jpg or upload below" 
-                className="bg-neutral-light text-neutral-extralight" 
+              <Input
+                id="imageUrl"
+                name="imageUrl"
+                type="url"
+                value={mangaDetails.imageUrl}
+                onChange={handleChange}
+                placeholder="https://example.com/image.jpg or upload below"
+                className="bg-neutral-light text-neutral-extralight"
               />
               <p className="text-xs text-neutral-extralight/70 mt-1">
                 Paste an image URL directly, or upload an image:
               </p>
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-2">
-                <Input 
-                    id="coverImageFile" 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={handleCoverFileChange} 
+                <Input
+                    id="coverImageFile"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCoverFileChange}
                     className="bg-neutral-light text-neutral-extralight flex-grow file:text-sm file:font-medium file:text-brand-primary file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:bg-brand-primary/20 hover:file:bg-brand-primary/30"
                 />
                 <Button type="button" onClick={handleCoverUpload} disabled={!selectedCoverFile || isUploadingCover || isSubmittingManga} className="bg-accent hover:bg-accent/80 text-accent-foreground shrink-0 w-full sm:w-auto">
@@ -313,12 +314,12 @@ export default function ManageMangasPage() {
                 <div className="mt-3">
                   <Label className="text-neutral-extralight text-xs">Image Preview:</Label>
                   <div className="mt-2 relative w-32 h-48 rounded border border-neutral-light overflow-hidden">
-                    <Image 
-                        src={mangaDetails.imageUrl} 
-                        alt="Cover preview" 
+                    <Image
+                        src={mangaDetails.imageUrl}
+                        alt="Cover preview"
                         fill
-                        objectFit="cover" 
-                        key={mangaDetails.imageUrl} 
+                        objectFit="cover"
+                        key={mangaDetails.imageUrl}
                         onError={(e) => (e.currentTarget.src = 'https://placehold.co/300x450/2D3748/A0AEC0?text=Invalid+URL')}
                     />
                   </div>
@@ -351,7 +352,7 @@ export default function ManageMangasPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading && mangas.length === 0 ? ( 
+          {isLoading && mangas.length === 0 ? (
              <p className="text-neutral-extralight/70">Loading mangas...</p>
           ) : mangas.length === 0 ? (
             <p className="text-neutral-extralight/70">No mangas added yet.</p>
@@ -360,9 +361,9 @@ export default function ManageMangasPage() {
               {mangas.map((manga) => (
                 <Card key={manga.id} className="bg-neutral-light overflow-hidden shadow-md">
                   <div className="relative w-full h-48">
-                    <Image 
-                        src={manga.imageUrl || 'https://placehold.co/300x450.png'} 
-                        alt={manga.title} 
+                    <Image
+                        src={manga.imageUrl || 'https://placehold.co/300x450.png'}
+                        alt={manga.title}
                         fill
                         objectFit="cover"
                         data-ai-hint={manga.dataAiHint || "manga cover"}
@@ -383,9 +384,9 @@ export default function ManageMangasPage() {
                          <ExternalLink className="h-3 w-3 mr-1" /> Read Externally
                       </a>
                     )}
-                    <Button 
-                        variant="ghost" 
-                        size="sm" 
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         className="text-red-400 hover:text-red-300 hover:bg-neutral-medium/50 p-1 mt-2 h-auto w-auto self-end"
                         onClick={() => handleDeleteManga(manga.id, manga.title)}
                         aria-label={`Delete ${manga.title}`}
@@ -402,5 +403,6 @@ export default function ManageMangasPage() {
     </div>
   );
 }
+    
 
     
