@@ -58,8 +58,8 @@ async function getHomePageData() {
   let hasMoreTrending = false;
   let hasMoreNewReleases = false;
 
+  // Fetch Hero Item
   try {
-    // Fetch Hero Item
     const sliderQuery = query(collection(db, 'sliderItems'), orderBy('createdAt', 'desc'), limit(1));
     const sliderSnapshot = await getDocs(sliderQuery);
     if (!sliderSnapshot.empty) {
@@ -75,8 +75,13 @@ async function getHomePageData() {
         createdAt: docData.createdAt,
       };
     }
+  } catch (error) {
+    console.error("Error fetching hero item:", error);
+    heroItem = null; // Ensure fallback if error
+  }
 
-    // Fetch Trending Manga
+  // Fetch Trending Manga
+  try {
     const trendingQuery = query(collection(db, 'mangas'), orderBy('views', 'desc'), limit(FETCH_LIMIT_FOR_MANGA_HAS_MORE));
     const trendingSnapshot = await getDocs(trendingQuery);
     const allTrending = trendingSnapshot.docs.map(doc => {
@@ -91,16 +96,19 @@ async function getHomePageData() {
     });
     trendingManga = allTrending.slice(0, ITEMS_PER_MANGA_SECTION_PREVIEW);
     hasMoreTrending = allTrending.length > ITEMS_PER_MANGA_SECTION_PREVIEW;
+  } catch (error) {
+    console.error("Error fetching trending manga:", error);
+    trendingManga = [];
+    hasMoreTrending = false;
+  }
 
-    // Fetch New Release Manga
+  // Fetch New Release Manga
+  try {
     const mangaCollectionRef = collection(db, 'mangas');
     let newReleaseSnapshot = await getDocs(query(mangaCollectionRef, orderBy('updatedAt', 'desc'), limit(FETCH_LIMIT_FOR_MANGA_HAS_MORE)));
 
-    // If updatedAt yields fewer than the desired number of items for preview, or is empty, try createdAt
-    if (newReleaseSnapshot.docs.length < ITEMS_PER_MANGA_SECTION_PREVIEW) {
+    if (newReleaseSnapshot.docs.length < ITEMS_PER_MANGA_SECTION_PREVIEW && newReleaseSnapshot.docs.length < FETCH_LIMIT_FOR_MANGA_HAS_MORE) {
         const fallbackSnapshot = await getDocs(query(mangaCollectionRef, orderBy('createdAt', 'desc'), limit(FETCH_LIMIT_FOR_MANGA_HAS_MORE)));
-        // Use fallback if it has more items than the updatedAt query and updatedAt query was insufficient,
-        // OR if updatedAt query was empty and fallback has items.
         if (fallbackSnapshot.docs.length > newReleaseSnapshot.docs.length || (newReleaseSnapshot.empty && !fallbackSnapshot.empty) ) {
             newReleaseSnapshot = fallbackSnapshot;
         }
@@ -117,51 +125,61 @@ async function getHomePageData() {
     });
     newReleaseManga = allNewReleases.slice(0, ITEMS_PER_MANGA_SECTION_PREVIEW);
     hasMoreNewReleases = allNewReleases.length > ITEMS_PER_MANGA_SECTION_PREVIEW;
+  } catch (error) {
+    console.error("Error fetching new release manga:", error);
+    newReleaseManga = [];
+    hasMoreNewReleases = false;
+  }
 
-    // Fetch Custom Sections and their Manga
+  // Fetch Custom Sections and their Manga
+  try {
     const sectionsQuery = query(collection(db, 'sections'), orderBy('createdAt', 'asc'));
     const sectionsSnapshot = await getDocs(sectionsQuery);
     
     for (const sectionDoc of sectionsSnapshot.docs) {
         const sectionData = sectionDoc.data() as Omit<SectionDoc, 'id'>;
-        const mangasForSectionQuery = query(
-            collection(db, 'mangas'),
-            where('sectionId', '==', sectionDoc.id),
-            orderBy('updatedAt', 'desc'), 
-            limit(FETCH_LIMIT_FOR_MANGA_HAS_MORE)
-        );
-        const mangasSnapshot = await getDocs(mangasForSectionQuery);
-        const allMangaForSection = mangasSnapshot.docs.map(mangaDoc => {
-            const data = mangaDoc.data() as Omit<MangaDoc, 'id'>;
-            return {
-                id: mangaDoc.id,
-                title: data.title,
-                chapter: `${data.status} - ${data.chapters} Ch.`,
-                imageUrl: data.imageUrl,
-                dataAiHint: data.dataAiHint,
-            };
-        });
+        let mangasForSection: MangaCardItem[] = [];
+        let sectionHasMoreManga = false;
+
+        try {
+            const mangasForSectionQuery = query(
+                collection(db, 'mangas'),
+                where('sectionId', '==', sectionDoc.id),
+                orderBy('updatedAt', 'desc'), 
+                limit(FETCH_LIMIT_FOR_MANGA_HAS_MORE)
+            );
+            const mangasSnapshot = await getDocs(mangasForSectionQuery);
+            const allMangaForSection = mangasSnapshot.docs.map(mangaDoc => {
+                const data = mangaDoc.data() as Omit<MangaDoc, 'id'>;
+                return {
+                    id: mangaDoc.id,
+                    title: data.title,
+                    chapter: `${data.status} - ${data.chapters} Ch.`,
+                    imageUrl: data.imageUrl,
+                    dataAiHint: data.dataAiHint,
+                };
+            });
+            mangasForSection = allMangaForSection.slice(0, ITEMS_PER_MANGA_SECTION_PREVIEW);
+            sectionHasMoreManga = allMangaForSection.length > ITEMS_PER_MANGA_SECTION_PREVIEW;
+        } catch (mangaFetchError) {
+            console.error(`Error fetching manga for section ${sectionData.name}:`, mangaFetchError);
+            // Keep mangasForSection empty if error occurs for this specific section's manga
+        }
         
-        if (allMangaForSection.length > 0) { // Only add section if it has manga
+        if (mangasForSection.length > 0) { 
              customSections.push({
                 id: sectionDoc.id,
                 name: sectionData.name,
                 slug: sectionData.slug,
                 createdAt: sectionData.createdAt,
-                mangaList: allMangaForSection.slice(0, ITEMS_PER_MANGA_SECTION_PREVIEW),
-                hasMoreManga: allMangaForSection.length > ITEMS_PER_MANGA_SECTION_PREVIEW,
+                mangaList: mangasForSection,
+                hasMoreManga: sectionHasMoreManga,
             });
         }
     }
-
   } catch (error) {
-    console.error("Error fetching homepage data: ", error);
-    heroItem = null;
-    trendingManga = [];
-    newReleaseManga = [];
+    console.error("Error fetching custom sections list:", error);
     customSections = [];
-    hasMoreTrending = false;
-    hasMoreNewReleases = false;
   }
 
   return { heroItem, trendingManga, newReleaseManga, customSections, hasMoreTrending, hasMoreNewReleases };
@@ -227,8 +245,8 @@ export default async function HomePage() {
               key={section.id}
               title={section.name}
               mangaList={section.mangaList}
-              // viewAllHref={`/sections/${section.slug}`} // Enable if you create section-specific pages
-              hasMore={section.hasMoreManga}
+              // viewAllHref={`/sections/${section.slug}`} // Optional: Enable if you create section-specific pages
+              hasMore={section.hasMoreManga} // This will control the "View All" button for custom sections
             />
           ))}
           
@@ -245,3 +263,4 @@ export default async function HomePage() {
     </div>
   );
 }
+
