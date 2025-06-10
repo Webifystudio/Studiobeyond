@@ -121,16 +121,36 @@ export default function ManageNewsPage() {
     }
     setIsSubmitting(true);
     try {
-      const dataToSave: Omit<NewsItem, 'id' | 'createdAt'> & { createdAt: any } = {
-        ...itemDetails,
+      // Explicitly define the structure for Firestore, only including optional fields if they have content
+      const dataToSave: {
+        title: string;
+        description: string;
+        imageUrl: string;
+        buttonText?: string;
+        buttonHref?: string;
+        dataAiHint?: string;
+        createdAt: any; // For serverTimestamp
+      } = {
         title: itemDetails.title.trim(),
         description: itemDetails.description.trim(),
         imageUrl: itemDetails.imageUrl.trim(),
-        buttonText: itemDetails.buttonText?.trim() || undefined, // Save as undefined if empty
-        buttonHref: itemDetails.buttonHref?.trim() || undefined, // Save as undefined if empty
-        dataAiHint: itemDetails.dataAiHint?.trim() || undefined,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
       };
+
+      const trimmedButtonText = itemDetails.buttonText?.trim();
+      if (trimmedButtonText) {
+        dataToSave.buttonText = trimmedButtonText;
+      }
+
+      const trimmedButtonHref = itemDetails.buttonHref?.trim();
+      if (trimmedButtonHref) {
+        dataToSave.buttonHref = trimmedButtonHref;
+      }
+
+      const trimmedDataAiHint = itemDetails.dataAiHint?.trim();
+      if (trimmedDataAiHint) {
+        dataToSave.dataAiHint = trimmedDataAiHint;
+      }
 
       await addDoc(collection(db, 'newsItems'), dataToSave);
       toast({ title: "News Item Added", description: `"${itemDetails.title}" added successfully.` });
@@ -222,16 +242,16 @@ export default function ManageNewsPage() {
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <Label htmlFor="buttonText" className="text-neutral-extralight">Button Text (Optional)</Label>
-                    <Input id="buttonText" name="buttonText" type="text" value={itemDetails.buttonText} onChange={handleChange} placeholder="e.g., Read More, View Details" className="bg-neutral-light text-neutral-extralight" />
+                    <Input id="buttonText" name="buttonText" type="text" value={itemDetails.buttonText || ''} onChange={handleChange} placeholder="e.g., Read More, View Details" className="bg-neutral-light text-neutral-extralight" />
                 </div>
                 <div>
                     <Label htmlFor="buttonHref" className="text-neutral-extralight">Button Link (URL/Path - Optional)</Label>
-                    <Input id="buttonHref" name="buttonHref" type="text" value={itemDetails.buttonHref} onChange={handleChange} placeholder="/some-page or https://external.com" className="bg-neutral-light text-neutral-extralight" />
+                    <Input id="buttonHref" name="buttonHref" type="text" value={itemDetails.buttonHref || ''} onChange={handleChange} placeholder="/some-page or https://external.com" className="bg-neutral-light text-neutral-extralight" />
                 </div>
             </div>
             <div>
               <Label htmlFor="dataAiHint" className="text-neutral-extralight">AI Image Hint (Optional)</Label>
-              <Input id="dataAiHint" name="dataAiHint" type="text" value={itemDetails.dataAiHint} onChange={handleChange} placeholder="e.g., announcement banner update" className="bg-neutral-light text-neutral-extralight" />
+              <Input id="dataAiHint" name="dataAiHint" type="text" value={itemDetails.dataAiHint || ''} onChange={handleChange} placeholder="e.g., announcement banner update" className="bg-neutral-light text-neutral-extralight" />
             </div>
             <Button type="submit" className="bg-brand-primary hover:bg-brand-primary/80 text-white w-full sm:w-auto" disabled={isSubmitting || isUploadingImage}>
               {isSubmitting ? 'Adding Item...' : 'Add News Item'}
