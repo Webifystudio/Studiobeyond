@@ -36,7 +36,7 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isScrolled, setIsScrolled] = useState(false); // Only used if transparentOnTop is false
+  const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -54,12 +54,10 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
 
   useEffect(() => {
     if (transparentOnTop) {
-      // For always transparent header, scroll state doesn't change background
-      setIsScrolled(false); // Keep it false so dynamic classes for text/icons use "transparent" state
+      setIsScrolled(false); 
       return;
     }
 
-    // Original scroll logic for non-transparentOnTop headers
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
     };
@@ -103,15 +101,15 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
     ? [...navItemsBase, { href: '/profile/settings', label: 'Profile' }]
     : navItemsBase;
 
-  // Determine classes based on transparency and scroll state
-  const isEffectivelyTransparent = transparentOnTop; // Always transparent if transparentOnTop is true
+  const isEffectivelyTransparent = transparentOnTop && !isScrolled && !isMobileMenuOpen;
 
   const headerBgClass = isEffectivelyTransparent ? "bg-transparent" : "bg-neutral-medium shadow-lg";
   const textColorClass = isEffectivelyTransparent ? "text-white" : "text-neutral-extralight";
   const searchBgClass = isEffectivelyTransparent ? "bg-white/20 placeholder-white/70 text-white focus:bg-white/30" : "bg-neutral-light text-neutral-extralight placeholder-neutral-extralight/70";
   const searchIconColorClass = isEffectivelyTransparent ? "text-white/80" : "text-neutral-extralight";
   const userButtonHoverClass = isEffectivelyTransparent ? "hover:bg-white/20" : "hover:bg-neutral-light";
-  const mobileMenuBgClass = isEffectivelyTransparent ? "bg-black/80 backdrop-blur-md" : "bg-neutral-medium";
+  const mobileMenuTriggerColorClass = isMobileMenuOpen || !isEffectivelyTransparent ? "text-neutral-extralight" : "text-white";
+  const mobileMenuBgClass = "bg-neutral-medium"; // Mobile menu is always solid
 
 
   return (
@@ -128,7 +126,7 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
           <nav className="hidden md:flex space-x-6 items-center">
             {currentNavItems.map((item) => (
               <Link
-                key={item.label}
+                key={item.href} // Use href for key
                 href={item.href}
                 className={cn(
                   "hover:text-brand-primary transition duration-300 font-inter",
@@ -211,9 +209,9 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild className="md:hidden">
                 <Button variant="ghost" size="icon" aria-label="Open menu" className={cn(
-                  "rounded-full p-0 hover:text-brand-primary",
-                   textColorClass,
-                   userButtonHoverClass
+                  "rounded-full p-0",
+                   mobileMenuTriggerColorClass, 
+                   userButtonHoverClass 
                   )}>
                   {isMobileMenuOpen ? <X className="w-7 h-7" /> : <MenuIcon className="w-7 h-7" />}
                 </Button>
@@ -222,16 +220,11 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
                 side="top" 
                 className={cn(
                   "text-neutral-extralight p-0 h-auto border-b-neutral-light",
-                  mobileMenuBgClass
+                  mobileMenuBgClass 
                   )}
-                onInteractOutside={(e) => {
-                    if ((e.target as HTMLElement)?.closest('[aria-label="Open menu"]')) {
-                        e.preventDefault();
-                    }
-                }}
               >
-                <SheetHeader className="p-4 border-b border-neutral-light sr-only">
-                  <SheetTitle>Main Navigation Menu</SheetTitle>
+                <SheetHeader className="p-4 border-b border-neutral-light">
+                    <SheetTitle className="sr-only">Main Navigation Menu</SheetTitle>
                 </SheetHeader>
                 <div className="p-4 pt-2">
                    <div className="flex justify-between items-center mb-6 px-2">
@@ -239,20 +232,20 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
                             BEYOND SCANS
                         </Link>
                         <SheetClose asChild>
-                            <Button variant="ghost" size="icon" aria-label="Close menu" className={cn("rounded-full text-neutral-extralight hover:text-brand-primary p-0", isEffectivelyTransparent ? "hover:bg-white/10" : "hover:bg-neutral-light")}>
+                            <Button variant="ghost" size="icon" aria-label="Close menu" className={cn("rounded-full text-neutral-extralight hover:text-brand-primary p-0", "hover:bg-neutral-light")}>
                                 <X className="w-7 h-7" />
                             </Button>
                         </SheetClose>
                    </div>
                   <nav className="flex flex-col space-y-1 items-center">
                     {currentNavItems.map((item) => (
-                       <SheetClose asChild key={item.label}>
+                       <SheetClose asChild key={item.href}>
                           <Link
                               href={item.href}
                               className={cn(
                                   "block py-3 px-4 rounded-md text-neutral-extralight hover:text-brand-primary transition duration-300 font-inter text-lg w-full text-center",
-                                  isEffectivelyTransparent ? "hover:bg-white/10" : "hover:bg-neutral-light",
-                                  pathname === item.href && (isEffectivelyTransparent ? "bg-white/10 text-brand-primary" : "bg-neutral-light text-brand-primary")
+                                  "hover:bg-neutral-light", 
+                                  pathname === item.href && "bg-neutral-light text-brand-primary"
                               )}
                           >
                           {item.label}
@@ -268,10 +261,10 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
                         onKeyDown={(e) => { if (e.key === 'Enter') handleMobileSearchSubmit(); }}
                         className={cn(
                            "rounded-full py-2 px-4 pl-10 focus:outline-none focus:ring-2 focus:ring-brand-primary transition duration-300 w-full h-10",
-                           searchBgClass
+                           "bg-neutral-light text-neutral-extralight placeholder-neutral-extralight/70" 
                            )}
                       />
-                      <Search className={cn("w-5 h-5 absolute left-5 top-1/2 transform -translate-y-1/2 pointer-events-none", searchIconColorClass)} />
+                      <Search className={cn("w-5 h-5 absolute left-5 top-1/2 transform -translate-y-1/2 pointer-events-none", "text-neutral-extralight")} />
                     </div>
                   </nav>
                 </div>
@@ -283,4 +276,3 @@ export function Header({ transparentOnTop = false }: HeaderProps) {
     </header>
   );
 }
-
