@@ -69,6 +69,7 @@ export function DynamicMangaSection() {
   const fetchMangaForFilter = useCallback(async (filterCategory: CategoryDoc | { id: string; name: string; slug: string }) => {
     setIsLoadingManga(true);
     setDisplayedManga([]); // Clear previous manga
+    console.log(`[DynamicMangaSection] Fetching manga for: ${filterCategory.name}`);
     try {
       let mangaQuery;
       if (filterCategory.id === ALL_CATEGORIES_ID) {
@@ -78,6 +79,7 @@ export function DynamicMangaSection() {
           orderBy('updatedAt', 'desc'),
           limit(MANGA_DISPLAY_LIMIT)
         );
+        console.log("[DynamicMangaSection] Querying for New Releases (all latest).");
       } else {
         // Fetch manga for a specific category
         mangaQuery = query(
@@ -86,8 +88,11 @@ export function DynamicMangaSection() {
           orderBy('updatedAt', 'desc'),
           limit(MANGA_DISPLAY_LIMIT)
         );
+        console.log(`[DynamicMangaSection] Querying for category: "${filterCategory.name}" with 'array-contains'.`);
       }
       const mangaSnapshot = await getDocs(mangaQuery);
+      console.log(`[DynamicMangaSection] Firestore snapshot size for ${filterCategory.name}: ${mangaSnapshot.size}`);
+
       const fetchedManga = mangaSnapshot.docs.map(doc => {
         const data = doc.data() as MangaDoc;
         return {
@@ -100,9 +105,12 @@ export function DynamicMangaSection() {
       });
       setDisplayedManga(fetchedManga.slice(0, 6)); // Display up to 6
       setHasMoreManga(fetchedManga.length >= MANGA_DISPLAY_LIMIT);
+      console.log(`[DynamicMangaSection] Displaying ${fetchedManga.slice(0, 6).length} manga for ${filterCategory.name}. HasMore: ${fetchedManga.length >= MANGA_DISPLAY_LIMIT}`);
 
     } catch (error) {
       console.error(`Error fetching manga for ${filterCategory.name}:`, error);
+      // IMPORTANT: Check browser console for Firestore index errors.
+      // The error message often includes a link to create the required index.
       setDisplayedManga([]);
       setHasMoreManga(false);
     }
@@ -122,15 +130,15 @@ export function DynamicMangaSection() {
 
   return (
     <section className="mb-12">
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-4 sm:mb-6 gap-3 sm:gap-0">
-        <h2 className="text-2xl sm:text-3xl font-bold section-title text-white font-headline order-1 sm:order-none">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3 sm:gap-0">
+        <h2 className="text-2xl sm:text-3xl font-bold section-title text-white font-headline order-1 sm:order-none w-full sm:w-auto">
           {isLoadingManga && selectedCategory.id !== ALL_CATEGORIES_ID ? `Loading ${selectedCategory.name}...` : gridTitle}
-          {isLoadingManga && selectedCategory.id === ALL_CATEGORIES_ID ? `Loading New Releases...` : ''}
+          {isLoadingManga && selectedCategory.id === ALL_CATEGORIES_ID && !selectedCategory.name.includes("Loading") ? `Loading New Releases...` : ''}
         </h2>
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="min-w-[180px] order-none sm:order-1">
+            <Button variant="outline" className="min-w-[180px] order-none sm:order-1 self-start sm:self-center">
               <ListFilter className="mr-2 h-4 w-4" />
               Sort by: {selectedCategory.name}
               <ChevronDown className="ml-auto h-4 w-4 opacity-70" />
@@ -183,9 +191,10 @@ export function DynamicMangaSection() {
         />
       ) : (
         <p className="text-neutral-extralight/70 text-center py-6">
-          No manga found for "{selectedCategory.name}".
+          No manga found for "{selectedCategory.name}". Please ensure mangas are assigned to this category and that the required Firestore index is created (check browser console for a link if there's an error).
         </p>
       )}
     </section>
   );
 }
+
