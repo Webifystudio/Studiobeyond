@@ -36,14 +36,14 @@ import {
 } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCOPDqKGjZnsbY4zYWsJoVNVvKD-KS5H2Q",
-  authDomain: "studio-beyond-b38c2.firebaseapp.com",
-  databaseURL: "https://studio-beyond-b38c2-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "studio-beyond-b38c2",
-  storageBucket: "studio-beyond-b38c2.appspot.com",
-  messagingSenderId: "617421665131",
-  appId: "1:617421665131:web:db1aa35c0a54f71541d22e"
-};
+    apiKey: "AIzaSyAo2sKaliAXr3SvcenZwbues6fjpYDCEEA",
+    authDomain: "beyond-scans.firebaseapp.com",
+    projectId: "beyond-scans",
+    storageBucket: "beyond-scans.appspot.com", // Corrected from your provided .firebasestorage.app
+    messagingSenderId: "1096743928524",
+    appId: "1:1096743928524:web:fb747c737c647aed657869",
+    measurementId: "G-R95ZZPLRJR"
+  };
 
 let app: FirebaseApp;
 let db: Firestore;
