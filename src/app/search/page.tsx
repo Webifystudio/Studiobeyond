@@ -55,7 +55,7 @@ function SearchResults() {
           );
           setFilteredManga(results);
         } else {
-          setFilteredManga([]); // No query, show no results or all, depending on preference
+          setFilteredManga([]); 
         }
       } catch (error) {
         console.error("Error fetching or filtering manga: ", error);
@@ -69,7 +69,7 @@ function SearchResults() {
 
   if (isLoading) {
     return (
-      <>
+      <div>
         <Skeleton className="h-8 w-1/3 mb-6" />
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
           {[...Array(6)].map((_, i) => (
@@ -82,7 +82,7 @@ function SearchResults() {
             </div>
           ))}
         </div>
-      </>
+      </div>
     );
   }
 
@@ -123,7 +123,8 @@ export default function SearchPage() {
           </Link>
         </Button>
         <Suspense fallback={
-            <>
+            // Wrap fallback content in a single div
+            <div> 
                 <Skeleton className="h-8 w-1/3 mb-6" />
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
                 {[...Array(6)].map((_, i) => (
@@ -136,7 +137,7 @@ export default function SearchPage() {
                     </div>
                 ))}
                 </div>
-          </>
+            </div>
         }>
           <SearchResults />
         </Suspense>
