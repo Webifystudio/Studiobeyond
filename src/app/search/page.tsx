@@ -97,7 +97,6 @@ function SearchResults() {
   }
 
   return (
-    // Ensure SearchResults returns a single root element, not a fragment
     <div>
       {filteredManga.length > 0 ? (
         <MangaGrid title={`Search Results for "${query}"`} mangaList={filteredManga} />
@@ -124,9 +123,7 @@ export default function SearchPage() {
           </Link>
         </Button>
         <Suspense fallback={
-            <div className="text-center py-10">
-                <p className="text-xl text-neutral-extralight">Loading search results...</p>
-            </div>
+          <div>Loading search results...</div>
         }>
           <SearchResults />
         </Suspense>
