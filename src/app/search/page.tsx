@@ -123,20 +123,10 @@ export default function SearchPage() {
           </Link>
         </Button>
         <Suspense fallback={
-            // Wrap fallback content in a single div
-            <div> 
-                <Skeleton className="h-8 w-1/3 mb-6" />
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
-                {[...Array(6)].map((_, i) => (
-                    <div key={i} className="bg-neutral-medium rounded-xl overflow-hidden shadow-lg">
-                    <Skeleton className="aspect-[2/3] w-full" />
-                    <div className="p-3 sm:p-4">
-                        <Skeleton className="h-5 w-3/4 mb-1" />
-                        <Skeleton className="h-4 w-1/2" />
-                    </div>
-                    </div>
-                ))}
-                </div>
+            // Simplified fallback to a single root div with text.
+            // This reduces complexity during prerendering.
+            <div className="text-center py-10">
+                <p className="text-xl text-neutral-extralight">Loading search results...</p>
             </div>
         }>
           <SearchResults />
