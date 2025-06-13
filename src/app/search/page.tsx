@@ -25,7 +25,7 @@ interface MangaDoc {
 function SearchResults() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q');
-  
+
   const [allManga, setAllManga] = useState<MangaItem[]>([]);
   const [filteredManga, setFilteredManga] = useState<MangaItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,12 +50,12 @@ function SearchResults() {
 
         if (query && query.trim()) {
           const lowercasedQuery = query.toLowerCase().trim();
-          const results = fetchedMangaList.filter(manga => 
+          const results = fetchedMangaList.filter(manga =>
             manga.title.toLowerCase().includes(lowercasedQuery)
           );
           setFilteredManga(results);
         } else {
-          setFilteredManga([]); 
+          setFilteredManga([]);
         }
       } catch (error) {
         console.error("Error fetching or filtering manga: ", error);
@@ -97,7 +97,8 @@ function SearchResults() {
   }
 
   return (
-    <>
+    // Ensure SearchResults returns a single root element, not a fragment
+    <div>
       {filteredManga.length > 0 ? (
         <MangaGrid title={`Search Results for "${query}"`} mangaList={filteredManga} />
       ) : (
@@ -107,7 +108,7 @@ function SearchResults() {
             <p className="text-neutral-extralight/80">We couldn't find any manga matching "{query}". Try a different search term.</p>
         </div>
       )}
-    </>
+    </div>
   );
 }
 
@@ -123,8 +124,6 @@ export default function SearchPage() {
           </Link>
         </Button>
         <Suspense fallback={
-            // Simplified fallback to a single root div with text.
-            // This reduces complexity during prerendering.
             <div className="text-center py-10">
                 <p className="text-xl text-neutral-extralight">Loading search results...</p>
             </div>
