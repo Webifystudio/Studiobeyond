@@ -6,7 +6,7 @@ import { useParams, useRouter }
 from 'next/navigation';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
-import { summarizeReviews, type SummarizeReviewsInput, type SummarizeReviewsOutput } from '@/ai/flows/summarize-reviews';
+import { type SummarizeReviewsInput, type SummarizeReviewsOutput } from '@/ai/flows/summarize-reviews';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -47,6 +47,22 @@ interface CommentDoc {
   userPhotoURL?: string | null;
   text: string;
   createdAt: Timestamp;
+}
+
+async function summarizeReviews(input: SummarizeReviewsInput): Promise<SummarizeReviewsOutput> {
+  const response = await fetch('/api/genkit/summarizeReviewsFlow', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    const errorData = await response.text();
+    console.error('Failed to summarize reviews:', errorData);
+    throw new Error('Failed to summarize reviews');
+  }
+  return response.json();
 }
 
 export default function MangaDetailPage() {
